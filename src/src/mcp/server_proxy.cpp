@@ -53,7 +53,7 @@ bool MCPServer::connect(const std::vector<std::string>& command) {
     
     return initialize();
 }
-
+//cite https://modelcontextprotocol.io/specification/2025-06-18/schema
 bool MCPServer::initialize() {
     std::map<std::string, std::string> params;
     params["protocolVersion"] = json::str("2024-11-05");
