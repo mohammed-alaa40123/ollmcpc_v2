@@ -17,53 +17,84 @@
 
 ### Prerequisites
 
--   **C++17** compatible compiler (GCC/Clang)
--   **CMake** 3.10+
--   **libcurl** (for API communication)
--   **Pthreads** (for multi-threaded MCP handling)
+Before building OLLMCPC, ensure your system has the following dependencies:
+
+- **Compiler**: GCC 9+ or Clang 10+ (C++17 support required).
+- **Build System**: CMake 3.10+ and Make.
+- **Libraries**:
+    - `libcurl`: For all HTTP communication (Ollama/Gemini APIs).
+    - `libssl`: For secure connections.
+    - `nlohmann-json`: (Bundled or system) For JSON serialization.
+- **Backends**:
+    - **Ollama**: Required for local LLM support. [Install here](https://ollama.com).
+    - **Node.js/NPM**: Required for running external MCP servers (like filesystem or fetch).
+
+**Quick Install (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential cmake libcurl4-openssl-dev libssl-dev nodejs npm
+```
 
 ### Installation & Build
 
-Follow these steps to build the project from source:
+#### Automated Setup
+We provide a setup script that handles dependencies, builds the project, pulls recommended models, and installs the binaries:
 
 ```bash
-mkdir build
-cd build
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+```
+
+#### Manual Build
+If you prefer to build manually:
+
+```bash
+mkdir -p build && cd build
 cmake ..
-make clean
 make -j$(nproc)
 ```
 
-The build process generates two binaries:
-1. `ollmcpc`: The main CLI client.
-2. `mcp_server`: The tool host server.
+This will produce:
+- `ollmcpc`: The main interactive client.
+- `mcp_server`: The internal tool host.
+
+---
 
 ## 📖 Usage
 
-Run the client from the root directory:
+### Initializing Configuration
+Before your first run, generate a default configuration:
 
 ```bash
-./build/ollmcpc serve
+./build/ollmcpc config
 ```
+This creates `~/.ollmcpc.json`. You can edit this file to add API keys or additional MCP servers.
 
-### Commands
+### Starting a Session
+The primary way to use OLLMCPC is the `serve` command:
 
-| Command | Description |
-| :--- | :--- |
-| `serve` | Start the interactive MCP session. |
-| `config` | Run the interactive configuration wizard. |
-| `list` | Show available models and providers. |
-| `--help` | Show usage information. |
-
-### Options (for `serve`)
-
--   `--provider <name>`: Override the default provider (`ollama`, `gemini`, or `manual`).
--   `--model <name>`: Override the default model (e.g., `llama3`, `gemini-pro`).
-
-Example:
 ```bash
+# Start with default settings (from config)
+./build/ollmcpc serve
+
+# Start with a specific provider and model
 ./build/ollmcpc serve --provider gemini --model gemini-1.5-flash
 ```
+
+### Interactive Commands
+Inside the session, you can use:
+- `/help`: Show available internal commands.
+- `/servers`: List all connected MCP servers and their status.
+- `/toggle <name>`: Enable/Disable a specific MCP server.
+- `/exit` or `Ctrl+D`: End the session.
+
+### Direct Tool Access (Manual Mode)
+If you just want to test tools without an LLM:
+```bash
+./build/ollmcpc serve --provider manual
+```
+Use the arrow keys and Enter to select and execute tools.
+
 
 ## ⚙️ Configuration
 
@@ -92,5 +123,16 @@ To configure interactively, run:
 
 The project implements a **Human-in-the-Loop** mechanism. When an LLM requests a tool execution, the client pauses and prompts the user for confirmation. This ensures you have full control over what the AI does on your system.
 
+## 📚 Detailed Documentation
+
+For more in-depth information about the architecture, components, and advanced configuration, check out our documentation website.
+
+To view it locally:
+```bash
+./scripts/serve_docs.sh
+```
+Then visit `http://127.0.0.1:8000` in your browser.
+
 ---
 Built with ❤️ by the OLLMCPC Team.
+
