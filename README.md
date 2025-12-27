@@ -127,7 +127,9 @@ The project implements a **Human-in-the-Loop** mechanism. When an LLM requests a
 
 For more in-depth information about the architecture, components, and advanced configuration, check out our documentation website.
 
-To view it locally:
+**Online**: Visit our [GitHub Pages documentation](https://mohammed-alaa40123.github.io/ollmcpc_v2/) (auto-deployed on every commit).
+
+**Local**: To view the docs locally:
 ```bash
 ./scripts/serve_docs.sh
 ```

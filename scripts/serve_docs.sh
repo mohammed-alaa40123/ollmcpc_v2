@@ -8,7 +8,9 @@ VENV_PATH="$DOCS_DIR/.venv_docs"
 
 echo "📂 Setting up documentation environment in $VENV_PATH..."
 
-if [ ! -d "$VENV_PATH" ]; then
+if [ ! -f "$VENV_PATH/bin/activate" ]; then
+    echo "🔨 Creating virtual environment..."
+    rm -rf "$VENV_PATH"
     python3 -m venv "$VENV_PATH"
     echo "✅ Virtual environment created."
 fi

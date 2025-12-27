@@ -45,6 +45,7 @@ nav:
   - Advanced:
     - Commands & Toggling: advanced/commands.md
     - Custom MCP Servers: advanced/custom_servers.md
+  - Deployment: deployment.md
   - Troubleshooting: troubleshooting.md
 
 markdown_extensions:
