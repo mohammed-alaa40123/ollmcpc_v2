@@ -1,0 +1,68 @@
+site_name: OLLMCPC Documentation
+site_description: High-performance C++ client for the Model Context Protocol (MCP)
+site_author: OLLMCPC Team
+repo_url: https://github.com/mohammed-alaa40123/ollmcpc_v2
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Configuration: configuration.md
+    - Quick Start: quickstart.md
+  - Architecture: architecture.md
+  - Components:
+    - App (UI & Logic): components/app.md
+    - LLM Providers: components/llm.md
+    - MCP Backend: components/mcp.md
+    - Utilities: components/utils.md
+  - Advanced:
+    - Commands & Toggling: advanced/commands.md
+    - Custom MCP Servers: advanced/custom_servers.md
+  - Deployment: deployment.md
+  - Troubleshooting: troubleshooting.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
