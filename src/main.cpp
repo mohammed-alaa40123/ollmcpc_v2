@@ -91,7 +91,11 @@ int main(int argc, char** argv) {
 
         // Add Configured Servers
         for (const auto& s : config.servers) {
-            client.addServer(s.name, s.command);
+            if (s.enabled) {
+                client.addServer(s.name, s.command);
+            } else {
+                std::cout << "  " << term::DIM << "○ Skipping disabled server: " << s.name << term::RESET << "\n";
+            }
         }
 
         // Start Loop

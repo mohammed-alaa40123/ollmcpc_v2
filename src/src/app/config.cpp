@@ -58,6 +58,14 @@ Config Config::load_default() {
                 MCPServerConfig s;
                 s.name = json_parse::extract_string(obj, "name");
                 s.command = json_parse::extract_string_array(obj, "command");
+                
+                // Parse enabled (default true)
+                s.enabled = true;
+                if (obj.find("\"enabled\": false") != std::string::npos || 
+                    obj.find("\"enabled\":false") != std::string::npos) {
+                    s.enabled = false;
+                }
+
                 if (!s.name.empty() && !s.command.empty()) {
                     config.servers.push_back(s);
                 }
@@ -92,7 +100,8 @@ void Config::save_default() const {
         for (const auto& arg : servers[i].command) {
             cmd_json.push_back(json::str(arg));
         }
-        file << "      \"command\": " << json::arr(cmd_json) << "\n";
+        file << "      \"command\": " << json::arr(cmd_json) << ",\n";
+        file << "      \"enabled\": " << (servers[i].enabled ? "true" : "false") << "\n";
         
         file << "    }" << (i < servers.size() - 1 ? "," : "") << "\n";
     }

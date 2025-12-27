@@ -85,7 +85,8 @@ void run_interactive_session(MCPClient& client) {
             std::cout << term::CYAN << "  /mode    " << term::RESET << "» Swap backend (Manual ↔ Ollama ↔ Gemini)\n"
                       << term::CYAN << "  /hil     " << term::RESET << "» Toggle Human-in-the-loop Guard\n"
                       << term::CYAN << "  /clear   " << term::RESET << "» Reset screen and context state\n"
-                      << term::CYAN << "  /servers " << term::RESET << "» Inspect active MCP nodes\n"
+                      << term::CYAN << "  /servers " << term::RESET << "» Inspect managed MCP nodes\n"
+                      << term::CYAN << "  /toggle  " << term::RESET << "» Enable/Disable specific servers\n"
                       << term::CYAN << "  /config  " << term::RESET << "» Open Preferences Manager\n"
                       << term::CYAN << "  /list    " << term::RESET << "» Inventory of available tools\n"
                       << term::CYAN << "  /quit    " << term::RESET << "» Terminate session\n\n";
@@ -100,20 +101,53 @@ void run_interactive_session(MCPClient& client) {
         }
 
         if (input == "/servers") {
-            term::print_header("ACTIVE MCP NODES", term::MAGENTA);
-            auto& servers = client.getServers();
-            if (servers.empty()) {
+            term::print_header("MANAGED MCP NODES", term::MAGENTA);
+            Config cfg = Config::load_default();
+            const auto& active_servers = client.getServers();
+            
+            if (cfg.servers.empty() && active_servers.empty()) {
                 std::cout << "  " << term::RED << "⚠ NO NODES DETECTED" << term::RESET << "\n";
             } else {
-                for (const auto& s : servers) {
-                    std::cout << "  " << term::GREEN << "▣" << term::RESET << " " << term::BOLD << s->getName() << term::RESET << "\n";
-                    auto cmd = s->getCommand();
-                    std::cout << "    " << term::DIM << "Run: ";
-                    for (const auto& c : cmd) std::cout << c << " ";
+                // Show Internal Server
+                std::cout << "  " << term::GREEN << "▣" << term::RESET << " " << term::BOLD << "os-assistant" << term::RESET << " [ACTIVE/SYSTEM]\n";
+                
+                // Show External Servers from Config
+                for (const auto& s : cfg.servers) {
+                    bool is_active = false;
+                    for(auto& as : active_servers) if(as->getName() == s.name) is_active = true;
+                    
+                    std::cout << "  " << (s.enabled ? (is_active ? term::GREEN + "▣" : term::YELLOW + "◒") : term::RED + "▢") << term::RESET << " " 
+                              << term::BOLD << s.name << term::RESET << " [" << (s.enabled ? (is_active ? "ACTIVE" : "PENDING") : "DISABLED") << "]\n";
+                    std::cout << "    " << term::DIM << "Cmd: ";
+                    for (const auto& c : s.command) std::cout << c << " ";
                     std::cout << term::RESET << "\n";
                 }
             }
+            std::cout << "\n  " << term::DIM << "Tip: Use '/toggle <name>' to enable/disable. Restart required for process changes." << term::RESET << "\n";
             std::cout << "\n";
+            continue;
+        }
+
+        if (input.substr(0, 7) == "/toggle") {
+            std::string target = input.length() > 8 ? input.substr(8) : "";
+            if (target.empty()) {
+                std::cout << term::RED << "  ⚠ Usage: /toggle <server_name>" << term::RESET << "\n";
+                continue;
+            }
+            
+            Config cfg = Config::load_default();
+            bool found = false;
+            for (auto& s : cfg.servers) {
+                if (s.name == target) {
+                    s.enabled = !s.enabled;
+                    cfg.save_default();
+                    std::cout << (s.enabled ? term::GREEN : term::RED) << "  ✔ Server '" << target << "' is now " 
+                              << (s.enabled ? "ENABLED" : "DISABLED") << term::RESET << ". (Restart to apply)\n";
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) std::cout << term::RED << "  ⚠ Server '" << target << "' not found in config." << term::RESET << "\n";
             continue;
         }
 

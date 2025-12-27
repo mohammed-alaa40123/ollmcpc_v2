@@ -14,6 +14,7 @@ struct Config {
     struct MCPServerConfig {
         std::string name;
         std::vector<std::string> command;
+        bool enabled = true;
     };
     std::vector<MCPServerConfig> servers;
 
