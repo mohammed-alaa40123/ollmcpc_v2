@@ -101,12 +101,45 @@ void MCPServer::sendNotification(const std::string& method, const std::string& p
     write(stdin_pipe[1], json_msg.c_str(), json_msg.length());
 }
 
+#include "utils/logger.hpp"
+#include <poll.h>
+
 std::string MCPServer::readResponse() {
-    char buffer[8192];
-    ssize_t n = read(stdout_pipe[0], buffer, sizeof(buffer) - 1);
-    if (n <= 0) return "";
-    buffer[n] = '\0';
-    return std::string(buffer);
+    std::string line;
+    char c;
+    
+    // We expect JSON-RPC messages to be on a single line ending in \n
+    // Many servers print logs or npx info to stdout, so we skip non-JSON lines
+    
+    int retries = 50; // Try reading for a few seconds
+    while (retries-- > 0) {
+        line = "";
+        bool found_json = false;
+        
+        // Read one line
+        while (true) {
+            ssize_t n = read(stdout_pipe[0], &c, 1);
+            if (n <= 0) break;
+            if (c == '\n') break;
+            line += c;
+        }
+        
+        if (line.empty()) {
+            usleep(100000); // 100ms
+            continue;
+        }
+        
+        // Check if it looks like JSON
+        size_t first = line.find_first_not_of(" \t\r\n");
+        if (first != std::string::npos && line[first] == '{') {
+            utils::Logger::debug("[" + server_name + "] recv: " + line);
+            return line;
+        } else {
+            utils::Logger::debug("[" + server_name + "] junk: " + line);
+        }
+    }
+    
+    return "";
 }
 
 std::string MCPServer::listTools() {

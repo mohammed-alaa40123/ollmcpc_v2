@@ -4,15 +4,9 @@
 #include <string>
 #include <vector>
 
-struct ToolDef {
-    std::string name;
-    std::string description;
-    std::string parameters;
-};
-
 class ManualProvider : public LLMProvider {
 private:
-    std::vector<ToolDef> tools;
+    std::vector<Tool> tools;
 
 public:
     std::string chat(const std::string& user_message, 
@@ -22,4 +16,5 @@ public:
                  const std::string& parameters) override;
     std::string name() const override { return "manual"; }
     void clearTools() override { tools.clear(); }
+    std::vector<Tool> getTools() const override { return tools; }
 };

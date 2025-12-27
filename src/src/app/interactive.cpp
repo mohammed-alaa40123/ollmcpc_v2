@@ -8,12 +8,38 @@
 #include <thread>
 #include <chrono>
 #include <set>
+#include <termios.h>
+#include <unistd.h>
 
 namespace app {
+
+std::string get_password(const std::string& prompt) {
+    std::cout << prompt << std::flush;
+    std::string password;
+    termios oldt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    termios newt = oldt;
+    newt.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    std::getline(std::cin, password);
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    std::cout << "\n";
+    return password;
+}
 
 void run_interactive_session(MCPClient& client) {
     std::string input;
     std::vector<std::map<std::string, std::string>> conversation_history;
+    
+    // Initial System Prompt
+    std::map<std::string, std::string> system_msg;
+    system_msg["role"] = json::str("system");
+    system_msg["content"] = json::str(
+        "You are a powerful terminal assistant. You can use tools to interact with the system. "
+        "IMPORTANT: If a command requires root/admin permissions (e.g. killing a system process, editing restricted files), "
+        "you MUST prepend 'sudo ' to the command. The system will automatically prompt the user for their password."
+    );
+    conversation_history.push_back(system_msg);
     
     std::cout << "\033[2J\033[H" << std::flush;
     term::print_header("OLLMCPC PREMIUM v3.6", term::CYAN);
@@ -59,7 +85,8 @@ void run_interactive_session(MCPClient& client) {
             std::cout << term::CYAN << "  /mode    " << term::RESET << "» Swap backend (Manual ↔ Ollama ↔ Gemini)\n"
                       << term::CYAN << "  /hil     " << term::RESET << "» Toggle Human-in-the-loop Guard\n"
                       << term::CYAN << "  /clear   " << term::RESET << "» Reset screen and context state\n"
-                      << term::CYAN << "  /servers " << term::RESET << "» Inspect active MCP nodes\n"
+                      << term::CYAN << "  /servers " << term::RESET << "» Inspect managed MCP nodes\n"
+                      << term::CYAN << "  /toggle  " << term::RESET << "» Enable/Disable specific servers\n"
                       << term::CYAN << "  /config  " << term::RESET << "» Open Preferences Manager\n"
                       << term::CYAN << "  /list    " << term::RESET << "» Inventory of available tools\n"
                       << term::CYAN << "  /quit    " << term::RESET << "» Terminate session\n\n";
@@ -74,20 +101,53 @@ void run_interactive_session(MCPClient& client) {
         }
 
         if (input == "/servers") {
-            term::print_header("ACTIVE MCP NODES", term::MAGENTA);
-            auto& servers = client.getServers();
-            if (servers.empty()) {
+            term::print_header("MANAGED MCP NODES", term::MAGENTA);
+            Config cfg = Config::load_default();
+            const auto& active_servers = client.getServers();
+            
+            if (cfg.servers.empty() && active_servers.empty()) {
                 std::cout << "  " << term::RED << "⚠ NO NODES DETECTED" << term::RESET << "\n";
             } else {
-                for (const auto& s : servers) {
-                    std::cout << "  " << term::GREEN << "▣" << term::RESET << " " << term::BOLD << s->getName() << term::RESET << "\n";
-                    auto cmd = s->getCommand();
-                    std::cout << "    " << term::DIM << "Run: ";
-                    for (const auto& c : cmd) std::cout << c << " ";
+                // Show Internal Server
+                std::cout << "  " << term::GREEN << "▣" << term::RESET << " " << term::BOLD << "os-assistant" << term::RESET << " [ACTIVE/SYSTEM]\n";
+                
+                // Show External Servers from Config
+                for (const auto& s : cfg.servers) {
+                    bool is_active = false;
+                    for(auto& as : active_servers) if(as->getName() == s.name) is_active = true;
+                    
+                    std::cout << "  " << (s.enabled ? (is_active ? term::GREEN + "▣" : term::YELLOW + "◒") : term::RED + "▢") << term::RESET << " " 
+                              << term::BOLD << s.name << term::RESET << " [" << (s.enabled ? (is_active ? "ACTIVE" : "PENDING") : "DISABLED") << "]\n";
+                    std::cout << "    " << term::DIM << "Cmd: ";
+                    for (const auto& c : s.command) std::cout << c << " ";
                     std::cout << term::RESET << "\n";
                 }
             }
+            std::cout << "\n  " << term::DIM << "Tip: Use '/toggle <name>' to enable/disable. Restart required for process changes." << term::RESET << "\n";
             std::cout << "\n";
+            continue;
+        }
+
+        if (input.substr(0, 7) == "/toggle") {
+            std::string target = input.length() > 8 ? input.substr(8) : "";
+            if (target.empty()) {
+                std::cout << term::RED << "  ⚠ Usage: /toggle <server_name>" << term::RESET << "\n";
+                continue;
+            }
+            
+            Config cfg = Config::load_default();
+            bool found = false;
+            for (auto& s : cfg.servers) {
+                if (s.name == target) {
+                    s.enabled = !s.enabled;
+                    cfg.save_default();
+                    std::cout << (s.enabled ? term::GREEN : term::RED) << "  ✔ Server '" << target << "' is now " 
+                              << (s.enabled ? "ENABLED" : "DISABLED") << term::RESET << ". (Restart to apply)\n";
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) std::cout << term::RED << "  ⚠ Server '" << target << "' not found in config." << term::RESET << "\n";
             continue;
         }
 
@@ -111,7 +171,13 @@ void run_interactive_session(MCPClient& client) {
         }
 
         if (input == "/list") {
-            client.getLLM()->chat("list", {});
+            auto tools = client.getLLM()->getTools();
+            term::print_thought("Debug: Retrieved " + std::to_string(tools.size()) + " tools from current provider.");
+            std::vector<term::ToolInfo> tool_infos;
+            for (const auto& t : tools) {
+                tool_infos.push_back({t.name, t.description});
+            }
+            term::display_tool_menu(tool_infos);
             continue;
         }
 
@@ -173,6 +239,33 @@ void run_interactive_session(MCPClient& client) {
                 break;
             }
             turn_tool_signatures.insert(sig);
+
+            // COMPACTION: Remove newlines from tool_args to prevent breaking the IPC pipe
+            std::string compacted_args;
+            for (char c : tool_args) {
+                if (c == '\n' || c == '\r' || c == '\t') compacted_args += ' ';
+                else compacted_args += c;
+            }
+            tool_args = compacted_args;
+
+            // SUDO DETECTION (specifically for run_shell_command)
+            if (tool_name == "run_shell_command") {
+                std::string cmd_val = json_parse::extract_string(tool_args, "command");
+                if (cmd_val.find("sudo ") == 0) {
+                    term::draw_box("SUDO PRIVILEGE ESCALATION", "The assistant requested root permissions for:\n" + term::DIM + cmd_val + term::RESET, term::MAGENTA);
+                    std::string pass = get_password("  [sudo] password for user: ");
+                    if (!pass.empty()) {
+                        // Rewrite the command to inject the password via stdin
+                        // Using 'echo pass | sudo -S'
+                        std::string new_cmd = "echo " + json::escape(pass) + " | sudo -S " + cmd_val.substr(5);
+                        
+                        // We need to rebuild the tool_args JSON with the new command
+                        std::map<std::string, std::string> new_args_map;
+                        new_args_map["command"] = json::str(new_cmd);
+                        tool_args = json::obj(new_args_map);
+                    }
+                }
+            }
 
             // Access Control (HIL)
             bool approved = true;

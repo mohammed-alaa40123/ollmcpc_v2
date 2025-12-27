@@ -23,6 +23,7 @@ void OllamaProvider::addTool(const std::string& name, const std::string& descrip
     tool["function"] = json::obj(func);
     
     tools_json.push_back(json::obj(tool));
+    tools.push_back({name, description, parameters});
 }
 
 std::string OllamaProvider::chat(const std::string& user_message, 
