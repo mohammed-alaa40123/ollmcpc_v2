@@ -69,10 +69,20 @@ namespace json_parse {
     }
 
     std::string extract_string(const std::string& json, const std::string& key) {
-        std::string search = "\"" + key + "\":\"";
-        size_t start = json.find(search);
-        if (start == std::string::npos) return "";
-        start += search.length();
+        std::string search = "\"" + key + "\"";
+        size_t pos = json.find(search);
+        if (pos == std::string::npos) return "";
+        
+        pos += search.length();
+        // Skip whitespace, colon, and find the opening quote
+        while (pos < json.length() && json[pos] != ':') pos++;
+        if (pos >= json.length()) return "";
+        pos++; // Skip ':'
+        
+        while (pos < json.length() && isspace(json[pos])) pos++;
+        if (pos >= json.length() || json[pos] != '"') return "";
+        size_t start = pos + 1;
+        
         size_t end = json.find("\"", start);
         while (end != std::string::npos && json[end-1] == '\\') {
             end = json.find("\"", end + 1);
@@ -156,5 +166,27 @@ namespace json_parse {
             end++;
         }
         return json.substr(start, end - start);
+    }
+    std::vector<std::string> extract_string_array(const std::string& json, const std::string& key) {
+        std::vector<std::string> result;
+        std::string array_str = extract_array(json, key);
+        if (array_str.empty() || array_str == "[]") return result;
+        
+        size_t pos = 1; // skip '['
+        while (pos < array_str.length() - 1) {
+            size_t start = array_str.find("\"", pos);
+            if (start == std::string::npos || start >= array_str.length() - 1) break;
+            start++;
+            size_t end = array_str.find("\"", start);
+            while (end != std::string::npos && array_str[end-1] == '\\') {
+                end = array_str.find("\"", end + 1);
+            }
+            if (end == std::string::npos) break;
+            
+            result.push_back(unescape(array_str.substr(start, end - start)));
+            pos = end + 1;
+            while (pos < array_str.length() && (array_str[pos] == ',' || isspace(array_str[pos]))) pos++;
+        }
+        return result;
     }
 }

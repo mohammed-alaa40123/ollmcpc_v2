@@ -8,12 +8,38 @@
 #include <thread>
 #include <chrono>
 #include <set>
+#include <termios.h>
+#include <unistd.h>
 
 namespace app {
+
+std::string get_password(const std::string& prompt) {
+    std::cout << prompt << std::flush;
+    std::string password;
+    termios oldt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    termios newt = oldt;
+    newt.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    std::getline(std::cin, password);
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    std::cout << "\n";
+    return password;
+}
 
 void run_interactive_session(MCPClient& client) {
     std::string input;
     std::vector<std::map<std::string, std::string>> conversation_history;
+    
+    // Initial System Prompt
+    std::map<std::string, std::string> system_msg;
+    system_msg["role"] = json::str("system");
+    system_msg["content"] = json::str(
+        "You are a powerful terminal assistant. You can use tools to interact with the system. "
+        "IMPORTANT: If a command requires root/admin permissions (e.g. killing a system process, editing restricted files), "
+        "you MUST prepend 'sudo ' to the command. The system will automatically prompt the user for their password."
+    );
+    conversation_history.push_back(system_msg);
     
     std::cout << "\033[2J\033[H" << std::flush;
     term::print_header("OLLMCPC PREMIUM v3.6", term::CYAN);
@@ -111,7 +137,13 @@ void run_interactive_session(MCPClient& client) {
         }
 
         if (input == "/list") {
-            client.getLLM()->chat("list", {});
+            auto tools = client.getLLM()->getTools();
+            term::print_thought("Debug: Retrieved " + std::to_string(tools.size()) + " tools from current provider.");
+            std::vector<term::ToolInfo> tool_infos;
+            for (const auto& t : tools) {
+                tool_infos.push_back({t.name, t.description});
+            }
+            term::display_tool_menu(tool_infos);
             continue;
         }
 
@@ -173,6 +205,33 @@ void run_interactive_session(MCPClient& client) {
                 break;
             }
             turn_tool_signatures.insert(sig);
+
+            // COMPACTION: Remove newlines from tool_args to prevent breaking the IPC pipe
+            std::string compacted_args;
+            for (char c : tool_args) {
+                if (c == '\n' || c == '\r' || c == '\t') compacted_args += ' ';
+                else compacted_args += c;
+            }
+            tool_args = compacted_args;
+
+            // SUDO DETECTION (specifically for run_shell_command)
+            if (tool_name == "run_shell_command") {
+                std::string cmd_val = json_parse::extract_string(tool_args, "command");
+                if (cmd_val.find("sudo ") == 0) {
+                    term::draw_box("SUDO PRIVILEGE ESCALATION", "The assistant requested root permissions for:\n" + term::DIM + cmd_val + term::RESET, term::MAGENTA);
+                    std::string pass = get_password("  [sudo] password for user: ");
+                    if (!pass.empty()) {
+                        // Rewrite the command to inject the password via stdin
+                        // Using 'echo pass | sudo -S'
+                        std::string new_cmd = "echo " + json::escape(pass) + " | sudo -S " + cmd_val.substr(5);
+                        
+                        // We need to rebuild the tool_args JSON with the new command
+                        std::map<std::string, std::string> new_args_map;
+                        new_args_map["command"] = json::str(new_cmd);
+                        tool_args = json::obj(new_args_map);
+                    }
+                }
+            }
 
             // Access Control (HIL)
             bool approved = true;

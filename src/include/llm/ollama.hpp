@@ -20,5 +20,9 @@ public:
     void addTool(const std::string& name, const std::string& description, 
                  const std::string& parameters) override;
     std::string name() const override { return "ollama"; }
-    void clearTools() override { tools_json.clear(); registered_tool_names.clear(); }
+    void clearTools() override { tools_json.clear(); registered_tool_names.clear(); tools.clear(); }
+    std::vector<Tool> getTools() const override { return tools; }
+
+private:
+    std::vector<Tool> tools;
 };

@@ -33,14 +33,39 @@ Config Config::load_default() {
     
     std::string gkey = json_parse::extract_string(content, "gemini_api_key");
     if (!gkey.empty()) config.gemini_api_key = gkey;
+
+    std::string gmodel = json_parse::extract_string(content, "gemini_model");
+    if (!gmodel.empty()) config.gemini_model = gmodel;
     
     // HIL
-    if (content.find("\"human_in_loop\": false") != std::string::npos) config.human_in_loop = false;
+    if (content.find("\"human_in_loop\": false") != std::string::npos || 
+        content.find("\"human_in_loop\":false") != std::string::npos) {
+        config.human_in_loop = false;
+    } else {
+        config.human_in_loop = true;
+    }
     
-    // Servers (Very basic parsing of array of objects)
-    // For now we assume the file structure is simple enough or user added via code.
-    // Given the lack of a full JSON lib in this snippet, complex parsing is tricky.
-    // We will leave server loading basic/empty for this recreation or rely on manual edit.
+    // Servers
+    std::string servers_arr = json_parse::extract_array(content, "servers");
+    if (!servers_arr.empty() && servers_arr != "[]") {
+        size_t pos = 1; // skip '['
+        while (pos < servers_arr.length() - 1) {
+            size_t start = servers_arr.find("{", pos);
+            if (start == std::string::npos || start >= servers_arr.length() - 1) break;
+            
+            std::string obj = json_parse::extract_json_object(servers_arr.substr(start), "{");
+            if (obj != "{}") {
+                MCPServerConfig s;
+                s.name = json_parse::extract_string(obj, "name");
+                s.command = json_parse::extract_string_array(obj, "command");
+                if (!s.name.empty() && !s.command.empty()) {
+                    config.servers.push_back(s);
+                }
+            }
+            pos = start + obj.length();
+            while (pos < servers_arr.length() && (servers_arr[pos] == ',' || isspace(servers_arr[pos]))) pos++;
+        }
+    }
     
     return config;
 }
@@ -56,7 +81,22 @@ void Config::save_default() const {
     file << "  \"gemini_api_key\": " << json::str(gemini_api_key) << ",\n";
     file << "  \"gemini_model\": " << json::str(gemini_model) << ",\n";
     file << "  \"human_in_loop\": " << (human_in_loop ? "true" : "false") << ",\n";
-    file << "  \"servers\": []\n"; // Saving empty for now to avoid corrupting manual edits
+    
+    file << "  \"servers\": [\n";
+    for (size_t i = 0; i < servers.size(); ++i) {
+        file << "    {\n";
+        file << "      \"name\": " << json::str(servers[i].name) << ",\n";
+        
+        // Serialize command args as JSON strings
+        std::vector<std::string> cmd_json;
+        for (const auto& arg : servers[i].command) {
+            cmd_json.push_back(json::str(arg));
+        }
+        file << "      \"command\": " << json::arr(cmd_json) << "\n";
+        
+        file << "    }" << (i < servers.size() - 1 ? "," : "") << "\n";
+    }
+    file << "  ]\n";
     file << "}\n";
 }
 

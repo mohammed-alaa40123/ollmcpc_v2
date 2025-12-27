@@ -1,4 +1,5 @@
 #include "utils/http.hpp"
+#include "utils/logger.hpp"
 #include <curl/curl.h>
 #include <iostream>
 
@@ -25,7 +26,9 @@ std::string HTTPClient::post(const std::string& url, const std::string& data) {
         CURLcode res = curl_easy_perform(curl);
         
         if (res != CURLE_OK) {
-            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+            std::string err = curl_easy_strerror(res);
+            std::cerr << "curl_easy_perform() failed: " << err << std::endl;
+            utils::Logger::error("curl_easy_perform() failed: " + err);
         }
         
         curl_slist_free_all(headers);

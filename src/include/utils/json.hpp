@@ -19,4 +19,5 @@ namespace json_parse {
     std::string extract_array(const std::string& json, const std::string& key);
     std::string extract_val(const std::string& json, const std::string& key);
     std::string extract_json_object(const std::string& json, const std::string& key);
+    std::vector<std::string> extract_string_array(const std::string& json, const std::string& key);
 }

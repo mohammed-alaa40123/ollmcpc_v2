@@ -1,4 +1,5 @@
 #include "utils/json.hpp"
+#include "utils/logger.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -56,10 +57,14 @@ private:
     };
 
     void process_request(const std::string& json_req) {
+        utils::Logger::debug("Server received: " + json_req);
         std::string id = json_parse::extract_val(json_req, "\"id\":");
         std::string method = json_parse::extract_string(json_req, "method");
         
-        if (id.empty()) return; // Notification or invalid
+        if (id.empty()) {
+            utils::Logger::debug("Request ignored (no ID)");
+            return; 
+        }
         
         std::string result = "{}";
         
@@ -82,14 +87,18 @@ private:
              std::string name = json_parse::extract_string(json_req, "name");
              std::string args_json = json_parse::extract_json_object(json_req, "\"arguments\"");
              
+             utils::Logger::debug("Lookup tool: [" + name + "]");
+             
              // Find tool
              auto it = std::find_if(tools_metadata.begin(), tools_metadata.end(), 
                                    [&](const ToolMeta& t){ return t.name == name; });
              
              if (it != tools_metadata.end()) {
+                 utils::Logger::debug("Executing " + it->name);
                  std::string output = execute_tool(it->script, args_json, it->name);
                  result = "{\"content\":[{\"type\":\"text\",\"text\":" + json::str(output) + "}]}";
              } else {
+                 utils::Logger::error("Tool not found: [" + name + "]");
                  result = "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Unknown tool\"}]}";
              }
         }

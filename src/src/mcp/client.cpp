@@ -3,6 +3,7 @@
 #include "llm/provider_factory.hpp"
 #include "utils/json.hpp"
 #include "utils/terminal.hpp"
+#include "utils/logger.hpp"
 #include <iostream>
 #include <algorithm>
 #include <thread>
@@ -42,9 +43,13 @@ void MCPClient::registerTools() {
         }
 
         std::string tools_arr = json_parse::extract_array(result_obj, "tools");
-        if (tools_arr.empty() || tools_arr == "[]") continue;
+        if (tools_arr.empty() || tools_arr == "[]") {
+            utils::Logger::debug("No tools found for server: " + server->getName());
+            continue;
+        }
 
         size_t pos = 0;
+        int tool_count = 0;
         while (pos < tools_arr.length()) {
             pos = tools_arr.find("{", pos);
             if (pos == std::string::npos) break;
@@ -57,10 +62,12 @@ void MCPClient::registerTools() {
                 
                 if (!name.empty()) {
                     llm->addTool(name, desc, schema);
+                    tool_count++;
                 }
             }
             pos += tool_obj.length();
         }
+        utils::Logger::debug("Registered " + std::to_string(tool_count) + " tools from " + server->getName());
     }
 }
 
