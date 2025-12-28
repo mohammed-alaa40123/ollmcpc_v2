@@ -59,7 +59,7 @@ fi
 echo "⚙️  Configuring default environment..."
 CONFIG_FILE="$HOME/.ollmcpc.json"
 if [ ! -f "$CONFIG_FILE" ]; then
-    printf '{\n  "default_provider": "ollama",\n  "ollama_model": "functiongemma",\n  "gemini_api_key": "",\n  "gemini_model": "gemini-3-flash-preview",\n  "human_in_loop": true,\n  "servers": [\n    {\n      "name": "filesystem",\n      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "'$HOME'"],\n      "enabled": true\n    },\n    {\n      "name": "web-browsing",\n      "command": ["npx", "-y", "mcp-fetch-server"],\n      "enabled": true\n    }\n  ]\n}' > "$CONFIG_FILE"
+    printf '{\n  "default_provider": "ollama",\n  "ollama_model": "functiongemma:latest",\n  "gemini_api_key": "",\n  "gemini_model": "gemini-3-flash-preview",\n  "human_in_loop": true,\n  "servers": [\n    {\n      "name": "filesystem",\n      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "'$HOME'"],\n      "enabled": true\n    },\n    {\n      "name": "web-browsing",\n      "command": ["npx", "-y", "mcp-fetch-server"],\n      "enabled": true\n    }\n  ]\n}' > "$CONFIG_FILE"
     echo "✅ Created $CONFIG_FILE"
 else
     echo "ℹ️  $CONFIG_FILE already exists, skipping creation."
