@@ -59,12 +59,50 @@ std::string ManualProvider::chat(const std::string& user_message,
         const auto& t = tools[choice - 1];
         
         std::cout << "\n  " << term::BOLD << "Arguments for " << term::RESET << term::CYAN << t.name << term::RESET << "\n";
-        std::cout << "  " << term::DIM << "Format: JSON (e.g. {\"path\": \"/tmp\"})" << term::RESET << "\n";
+        std::cout << "  " << term::DIM << "Format: JSON (e.g. {\"path\": \"/tmp\"}) or just the value" << term::RESET << "\n";
         std::cout << "  Input (enter for empty {}): " << std::flush;
         
         std::string args;
         std::getline(std::cin, args);
-        if (args.empty()) args = "{}";
+        
+        // If args is empty, use {}
+        if (args.empty()) {
+            args = "{}";
+        }
+        // If args doesn't start with {, try to wrap it as the first required parameter
+        else if (args[0] != '{') {
+            // Find the first required parameter from the schema
+            std::string first_param = "";
+            // Common parameter names for shell commands
+            if (t.name.find("shell") != std::string::npos || t.name.find("command") != std::string::npos) {
+                first_param = "command";
+            } else if (t.name.find("directory") != std::string::npos || t.name.find("file") != std::string::npos) {
+                first_param = "path";
+            } else if (t.name.find("port") != std::string::npos) {
+                first_param = "port";
+            } else if (t.name.find("process") != std::string::npos || t.name.find("pid") != std::string::npos) {
+                first_param = "pid";
+            } else {
+                // Try to extract from schema
+                std::string req = json_parse::extract_array(t.parameters, "required");
+                if (!req.empty() && req != "[]") {
+                    size_t start = req.find("\"");
+                    if (start != std::string::npos) {
+                        size_t end = req.find("\"", start + 1);
+                        if (end != std::string::npos) {
+                            first_param = req.substr(start + 1, end - start - 1);
+                        }
+                    }
+                }
+            }
+            
+            if (!first_param.empty()) {
+                args = "{\"" + first_param + "\": " + json::str(args) + "}";
+            } else {
+                // Fallback: just wrap as "value"
+                args = "{\"value\": " + json::str(args) + "}";
+            }
+        }
 
         std::map<std::string, std::string> call;
         call["name"] = json::str(t.name);

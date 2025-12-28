@@ -19,10 +19,39 @@ Then run cmake with: `CXX=g++-11 cmake ..`
 
 ## Runtime Issues
 
-### Ollama Connection Refused
-Ensure Ollama is running:
+### Ollama Connection Refused / Couldn't Connect to Server
+If you see:
+```
+curl_easy_perform() failed: Couldn't connect to server
+```
+or
+```
+Ollama Connection Refused
+```
+
+This means Ollama isn't running. Start it with:
 ```bash
 ollama serve
+```
+
+To run it in the background:
+```bash
+nohup ollama serve > /tmp/ollama.log 2>&1 &
+```
+
+### Architecture Mismatch (qemu errors)
+If you see errors like:
+```
+qemu-x86_64: Could not open '/lib64/ld-linux-x86-64.so.2': No such file or directory
+```
+
+This means the binaries were compiled for a different CPU architecture (x86_64 vs ARM64). **You must rebuild on your own machine**:
+```bash
+cd build
+rm -rf *
+cmake ..
+make -j$(nproc)
+sudo cp ollmcpc mcp_server /usr/local/bin/
 ```
 
 ### Server Error: "npx not found"

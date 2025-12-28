@@ -11,19 +11,11 @@
 
 class MCPServerApp {
 public:
-    MCPServerApp() : tools_directory("../../../tools") { 
-        // Build path relies on binary location relative to tools
-        // In clean_build/build/mcp_server, tools are in Clean_build/tools
-        // So ../../tools is correct? No, clean_build/build/bin/mcp_server?
-        // Let's assume user installs or runs from build.
-        // If run from build/, then ../tools is correct (clean_build/tools).
-        // The default init was "../../../tools" assuming src/cpp/build/mcp_server vs root tools.
-        // In clean_build:
-        // root/tools
-        // root/build/mcp_server (executable)
-        // so ../tools is correct.
-        tools_directory = "../tools";
-    } 
+    MCPServerApp() : tools_directory("/usr/local/share/ollmcpc/tools") {
+        // Tools are installed globally to /usr/local/share/ollmcpc/tools
+        // This allows running ollmcpc from any directory
+    }
+ 
 
     void run() {
         std::string line;
@@ -128,6 +120,9 @@ private:
         } else if (tool_name == "run_shell_command") {
              std::string c = json_parse::extract_string(args_json, "command");
              if (!c.empty()) args.push_back(c);
+        } else if (tool_name == "run_secure_shell_command") {
+             std::string c = json_parse::extract_string(args_json, "command");
+             if (!c.empty()) args.push_back(c);
         }
 
         // Construct command line
@@ -142,18 +137,32 @@ private:
              cmd += " \"" + escaped + "\"";
         }
         
+        // Log the command being executed
+        utils::Logger::debug("[execute_tool] Tool: " + tool_name);
+        utils::Logger::debug("[execute_tool] Script: " + script);
+        utils::Logger::debug("[execute_tool] Full command: " + cmd);
+        utils::Logger::debug("[execute_tool] Args JSON: " + args_json);
+        
         // Execute
         std::array<char, 256> buffer;
         std::string result;
         std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
     
-        if (!pipe) return "Error: Failed to execute tool script";
+        if (!pipe) {
+            utils::Logger::error("[execute_tool] popen() failed for: " + cmd);
+            return "Error: Failed to execute tool script";
+        }
     
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
             result += buffer.data();
         }
     
         if (!result.empty() && result.back() == '\n') result.pop_back();
+        
+        utils::Logger::debug("[execute_tool] Result length: " + std::to_string(result.length()));
+        if (result.length() < 500) {
+            utils::Logger::debug("[execute_tool] Result: " + result);
+        }
         
         return result;
     }
