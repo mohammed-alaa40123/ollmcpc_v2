@@ -37,6 +37,8 @@ nav:
     - Configuration: configuration.md
     - Quick Start: quickstart.md
   - Architecture: architecture.md
+  - Technical:
+    - JSON-RPC & MCP Protocol: protocol.md
   - Components:
     - App (UI & Logic): components/app.md
     - LLM Providers: components/llm.md

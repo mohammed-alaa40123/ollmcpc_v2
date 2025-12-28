@@ -87,7 +87,8 @@ int main(int argc, char** argv) {
         std::cout << "🔌 Connecting to MCP servers...\n";
         
         // Always add the "os-assistant" server which corresponds to our mcp_server binary
-        client.addServer("os-assistant", {"./mcp_server"}); 
+        client.addServer("os-assistant", {"mcp_server"});
+ 
 
         // Add Configured Servers
         for (const auto& s : config.servers) {

@@ -39,6 +39,33 @@ Check `debug.log` in the root directory. It contains all JSON-RPC traffic betwee
 tail -f debug.log
 ```
 
+### "Failed to exec server" for os-assistant
+If you see this error on startup:
+```
+Failed to exec server
+Failed to initialize
+```
+
+This means the internal `mcp_server` binary cannot be found. Solutions:
+
+1. **If installed via setup script**: The binary should be in `/usr/local/bin/mcp_server`. Verify with:
+   ```bash
+   which mcp_server
+   ```
+
+2. **If running from build directory**: Use the full path:
+   ```bash
+   ./build/ollmcpc serve
+   ```
+   Or ensure `mcp_server` is in your PATH.
+
+3. **Rebuild and reinstall**:
+   ```bash
+   cd build && make -j$(nproc)
+   sudo cp mcp_server /usr/local/bin/
+   sudo cp ollmcpc /usr/local/bin/
+   ```
+
 ## Protocol Issues
 
 ### "Method not found"
