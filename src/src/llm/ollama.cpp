@@ -1,6 +1,8 @@
 #include "llm/ollama.hpp"
 #include "utils/json.hpp"
 #include "utils/http.hpp"
+#include "utils/logger.hpp"
+#include <fstream>
 #include <map>
 
 OllamaProvider::OllamaProvider(const std::string& model) 
@@ -49,5 +51,11 @@ std::string OllamaProvider::chat(const std::string& user_message,
     
     std::string request_json = json::obj(request);
     
-    return HTTPClient::post(ollama_url + "/api/chat", request_json);
+    utils::Logger::debug("Ollama Request: " + request_json);
+    
+    std::string response = HTTPClient::post(ollama_url + "/api/chat", request_json);
+    
+    utils::Logger::debug("Ollama Response: " + response);
+    
+    return response;
 }

@@ -14,7 +14,11 @@ void ManualProvider::addTool(const std::string& name, const std::string& descrip
 std::string ManualProvider::chat(const std::string& user_message, 
                                  const std::vector<std::map<std::string, std::string>>& history) {
     if (tools.empty()) {
-        return "{\"message\": {\"content\": \"No tools available.\"}}";
+        std::map<std::string, std::string> msg;
+        msg["content"] = json::str("No tools available.");
+        std::map<std::string, std::string> root;
+        root["message"] = json::obj(msg);
+        return json::obj(root);
     }
     int choice = 0;
     try { choice = std::stoi(user_message); } catch (...) {}
@@ -44,7 +48,13 @@ std::string ManualProvider::chat(const std::string& user_message,
         
         std::string choice_str;
         std::getline(std::cin, choice_str);
-        if (choice_str.empty()) return "{\"message\": {\"content\": \"Manual selection skipped.\"}}";
+        if (choice_str.empty()) {
+            std::map<std::string, std::string> msg;
+            msg["content"] = json::str("Manual selection skipped.");
+            std::map<std::string, std::string> root;
+            root["message"] = json::obj(msg);
+            return json::obj(root);
+        }
         try { choice = std::stoi(choice_str); } catch (...) {
             for (size_t i = 0; i < tools.size(); i++) {
                 if (tools[i].name == choice_str) {
@@ -84,7 +94,7 @@ std::string ManualProvider::chat(const std::string& user_message,
                 first_param = "pid";
             } else {
                 // Try to extract from schema
-                std::string req = json_parse::extract_array(t.parameters, "required");
+                std::string req = json::parse::get_array(t.parameters, "required");
                 if (!req.empty() && req != "[]") {
                     size_t start = req.find("\"");
                     if (start != std::string::npos) {
@@ -118,5 +128,9 @@ std::string ManualProvider::chat(const std::string& user_message,
         return json::obj(root);
     }
 
-    return "{\"message\": {\"content\": \"Manual selection skipped.\"}}";
+    std::map<std::string, std::string> msg;
+    msg["content"] = json::str("Manual selection skipped.");
+    std::map<std::string, std::string> root;
+    root["message"] = json::obj(msg);
+    return json::obj(root);
 }

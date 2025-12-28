@@ -35,9 +35,9 @@ void run_interactive_session(MCPClient& client) {
     std::map<std::string, std::string> system_msg;
     system_msg["role"] = json::str("system");
     system_msg["content"] = json::str(
-        "You are a powerful terminal assistant. You can use tools to interact with the system. "
-        "IMPORTANT: If a command requires root/admin permissions (e.g. killing a system process, editing restricted files), "
-        "you MUST prepend 'sudo ' to the command. The system will automatically prompt the user for their password."
+        "You are a powerful terminal assistant with access to system tools, file management, and web search. "
+        "You can run shell commands, read/write files, search the web for information, and search academic papers. "
+        "Be concise and helpful. When executing commands, show the user what you're doing."
     );
     conversation_history.push_back(system_msg);
     
@@ -207,10 +207,10 @@ void run_interactive_session(MCPClient& client) {
 
             std::string response = llm->chat(current_message, conversation_history);
             
-            std::string msg_obj = json_parse::extract_json_object(response, "message");
+            std::string msg_obj = json::parse::get_object(response, "message");
             if (msg_obj == "{}") msg_obj = response;
 
-            std::string content = json_parse::extract_string(msg_obj, "content");
+            std::string content = json::parse::get_string(msg_obj, "content");
             if (!content.empty()) {
                 term::draw_box("ASSISTANT", content, term::WHITE);
                 
@@ -222,14 +222,14 @@ void run_interactive_session(MCPClient& client) {
             }
             
             // Analyze for Tool Calls
-            std::string tool_calls_arr = json_parse::extract_array(msg_obj, "tool_calls");
+            std::string tool_calls_arr = json::parse::get_array(msg_obj, "tool_calls");
             if (tool_calls_arr.empty() || tool_calls_arr == "[]") break;
             
-            std::string call_obj = json_parse::extract_json_object(tool_calls_arr, "{"); 
+            std::string call_obj = json::parse::first_object(tool_calls_arr); 
             if (call_obj == "{}") break;
 
-            std::string tool_name = json_parse::extract_string(call_obj, "name");
-            std::string tool_args = json_parse::extract_json_object(call_obj, "arguments");
+            std::string tool_name = json::parse::get_string(call_obj, "name");
+            std::string tool_args = json::parse::get_object(call_obj, "arguments");
             if (tool_name.empty()) break;
 
             // Security & Loop Prevention
@@ -250,7 +250,7 @@ void run_interactive_session(MCPClient& client) {
 
             // SUDO DETECTION (specifically for run_shell_command)
             if (tool_name == "run_shell_command") {
-                std::string cmd_val = json_parse::extract_string(tool_args, "command");
+                std::string cmd_val = json::parse::get_string(tool_args, "command");
                 if (cmd_val.find("sudo ") == 0) {
                     term::draw_box("SUDO PRIVILEGE ESCALATION", "The assistant requested root permissions for:\n" + term::DIM + cmd_val + term::RESET, term::MAGENTA);
                     std::string pass = get_password("  [sudo] password for user: ");
@@ -293,7 +293,10 @@ void run_interactive_session(MCPClient& client) {
             bool success = false;
             for (const auto& server : client.getServers()) {
                  std::string r = server->callTool(tool_name, tool_args);
-                 if (!r.empty()) {
+                 // Skip if empty or if server doesn't know this tool
+                 if (!r.empty() && 
+                     r.find("Unknown tool") == std::string::npos &&
+                     r.find("not found") == std::string::npos) {
                      raw_result = r;
                      success = true;
                      break;
@@ -301,7 +304,7 @@ void run_interactive_session(MCPClient& client) {
             }
             
             if (!success) {
-                raw_result = "Exception: Target tool unavailable or script failure.";
+                raw_result = "Error: Tool not found on any connected server.";
             }
             
             if (!is_manual) {

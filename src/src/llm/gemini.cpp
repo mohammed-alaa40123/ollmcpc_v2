@@ -94,26 +94,26 @@ std::string GeminiProvider::chat(const std::string& user_message,
     utils::Logger::debug("Gemini Response: " + response);
 
     // Basic normalization for interactive.cpp
-    std::string candidates = json_parse::extract_array(response, "candidates");
+    std::string candidates = json::parse::get_array(response, "candidates");
     if (candidates.empty() || candidates == "[]") {
         return response; // Return error or empty
     }
 
-    std::string first_candidate = json_parse::extract_json_object(candidates, "{");
-    std::string content_obj = json_parse::extract_json_object(first_candidate, "content");
-    std::string parts_arr = json_parse::extract_array(content_obj, "parts");
-    std::string first_part = json_parse::extract_json_object(parts_arr, "{");
+    std::string first_candidate = json::parse::first_object(candidates);
+    std::string content_obj = json::parse::get_object(first_candidate, "content");
+    std::string parts_arr = json::parse::get_array(content_obj, "parts");
+    std::string first_part = json::parse::first_object(parts_arr);
     
-    std::string text = json_parse::extract_string(first_part, "text");
-    std::string func_call = json_parse::extract_json_object(first_part, "functionCall");
+    std::string text = json::parse::get_string(first_part, "text");
+    std::string func_call = json::parse::get_object(first_part, "functionCall");
     
     std::map<std::string, std::string> msg;
     msg["role"] = json::str("assistant");
     msg["content"] = json::str(text);
     
     if (func_call != "{}" && !func_call.empty()) {
-        std::string name = json_parse::extract_string(func_call, "name");
-        std::string args = json_parse::extract_json_object(func_call, "args");
+        std::string name = json::parse::get_string(func_call, "name");
+        std::string args = json::parse::get_object(func_call, "args");
         
         // Compact arguments
         std::string compact_args;

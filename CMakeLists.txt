@@ -15,6 +15,7 @@ find_package(Threads REQUIRED)
 # Utils
 set(UTILS_SRCS 
     src/src/utils/json.cpp
+    src/src/utils/jsonrpc.cpp
     src/src/utils/http.cpp
     src/src/utils/terminal.cpp
 )
@@ -53,7 +54,8 @@ target_link_libraries(ollmcpc PRIVATE CURL::libcurl Threads::Threads)
 # 2. Local MCP Server (Host for tools)
 add_executable(mcp_server
     src/src/mcp/server_app.cpp
-    src/src/utils/json.cpp  # Server needs JSON helper
+    src/src/utils/json.cpp     # Server needs JSON helper
+    src/src/utils/jsonrpc.cpp  # Server needs JSON-RPC helper
 )
 target_link_libraries(mcp_server PRIVATE Threads::Threads)
 

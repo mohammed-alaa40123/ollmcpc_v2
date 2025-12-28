@@ -1,10 +1,10 @@
 #include "mcp/server_proxy.hpp"
 #include "utils/json.hpp"
+#include "utils/jsonrpc.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
-#include <map>
 
 MCPServer::MCPServer(const std::string& name) : server_name(name), request_id(0), pid(-1) {}
 
@@ -79,25 +79,13 @@ bool MCPServer::initialize() {
 
 std::string MCPServer::sendRequest(const std::string& method, const std::string& params) {
     int id = ++request_id;
-    std::map<std::string, std::string> msg;
-    msg["jsonrpc"] = json::str("2.0");
-    msg["id"] = json::num(id);
-    msg["method"] = json::str(method);
-    msg["params"] = params;
-    
-    std::string json_msg = json::obj(msg) + "\n";
+    std::string json_msg = jsonrpc::request(id, method, params) + "\n";
     write(stdin_pipe[1], json_msg.c_str(), json_msg.length());
-    
     return readResponse();
 }
 
 void MCPServer::sendNotification(const std::string& method, const std::string& params) {
-    std::map<std::string, std::string> msg;
-    msg["jsonrpc"] = json::str("2.0");
-    msg["method"] = json::str(method);
-    msg["params"] = params;
-    
-    std::string json_msg = json::obj(msg) + "\n";
+    std::string json_msg = jsonrpc::notification(method, params) + "\n";
     write(stdin_pipe[1], json_msg.c_str(), json_msg.length());
 }
 

@@ -36,13 +36,13 @@ void MCPClient::registerTools() {
     for (const auto& server : servers) {
         std::string list_resp = server->listTools();
         
-        std::string result_obj = json_parse::extract_json_object(list_resp, "result");
+        std::string result_obj = json::parse::get_object(list_resp, "result");
         if (result_obj == "{}" || result_obj.length() < 10) {
-            std::string t_arr = json_parse::extract_array(list_resp, "tools");
+            std::string t_arr = json::parse::get_array(list_resp, "tools");
             if (!t_arr.empty()) result_obj = list_resp;
         }
 
-        std::string tools_arr = json_parse::extract_array(result_obj, "tools");
+        std::string tools_arr = json::parse::get_array(result_obj, "tools");
         if (tools_arr.empty() || tools_arr == "[]") {
             utils::Logger::debug("No tools found for server: " + server->getName());
             continue;
@@ -54,11 +54,12 @@ void MCPClient::registerTools() {
             pos = tools_arr.find("{", pos);
             if (pos == std::string::npos) break;
 
-            std::string tool_obj = json_parse::extract_json_object(tools_arr.substr(pos), "{");
+            std::string tool_obj = json::parse::first_object(tools_arr.substr(pos));
             if (tool_obj != "{}") {
-                std::string name = json_parse::extract_string(tool_obj, "name");
-                std::string desc = json_parse::extract_string(tool_obj, "description");
-                std::string schema = json_parse::extract_json_object(tool_obj, "inputSchema");
+                std::string name = json::parse::get_string(tool_obj, "name");
+                std::string desc = json::parse::get_string(tool_obj, "description");
+                // Sanitize schema from external servers (may have malformed JSON)
+                std::string schema = json::sanitize(json::parse::get_object(tool_obj, "inputSchema"));
                 
                 if (!name.empty()) {
                     llm->addTool(name, desc, schema);
