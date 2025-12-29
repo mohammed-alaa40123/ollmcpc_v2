@@ -147,6 +147,7 @@ std::string get_object(const std::string& json, const std::string& key) {
     
     size_t start = pos;
     int depth = 0;
+    size_t pos = start;
     for (; pos < json.length(); pos++) {
         if (json[pos] == '{') depth++;
         else if (json[pos] == '}' && --depth == 0) break;
