@@ -318,7 +318,7 @@ void run_interactive_session(MCPClient& client) {
             }
             
             if (!success) {
-                raw_result = "Error: Tool not found on any connected server.";
+                raw_result = "Error: Tool not found on any connected server or script failed!";
             }
             
             if (!is_manual) {

@@ -23,12 +23,17 @@ else
     echo "✅ All system packages are already installed."
 fi
 
-# Install Ollama
-if ! command -v ollama &> /dev/null; then
-    echo "⬇️  Ollama not found. Installing..."
-    curl -fsSL https://ollama.com/install.sh | sh
+# Install Ollama (optional)
+read -rp "Install Ollama? [y/N]: " install_ollama
+if [ "$install_ollama" = "y" ] || [ "$install_ollama" = "Y" ]; then
+    if ! command -v ollama >/dev/null 2>&1; then
+        echo "⬇️  Ollama not found. Installing..."
+        curl -fsSL https://ollama.com/install.sh | sh
+    else
+        echo "✅ Ollama already installed."
+    fi
 else
-    echo "✅ Ollama already installed."
+    echo "ℹ️  Skipping Ollama install."
 fi
 
 # Build
@@ -39,21 +44,21 @@ cmake ..
 make -j$(nproc)
 cd ..
 
-# Pull Models
-echo "🧬 Pulling models..."
-# Check if ollama is running, if not start it temporarily
-if ! pgrep -x "ollama" > /dev/null; then
-    ollama serve &
-    OLLAMA_PID=$!
-    sleep 5
-fi
+# # Pull Models
+# echo "🧬 Pulling models..."
+# # Check if ollama is running, if not start it temporarily
+# if ! pgrep -x "ollama" > /dev/null; then
+#     ollama serve &
+#     OLLAMA_PID=$!
+#     sleep 5
+# fi
 
-ollama pull qwen3:0.6b
-ollama pull functiongemma
+# ollama pull qwen3:0.6b
+# ollama pull functiongemma
 
-if [ -n "$OLLAMA_PID" ]; then
-    kill $OLLAMA_PID
-fi
+# if [ -n "$OLLAMA_PID" ]; then
+#     kill $OLLAMA_PID
+# fi
 
 # Create Default Config
 echo "⚙️  Configuring default environment..."
