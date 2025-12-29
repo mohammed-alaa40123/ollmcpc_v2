@@ -1,184 +1,118 @@
 // =============================================================================
-// JSON Builder and Parser Implementation
-// =============================================================================
-//
-// Lightweight JSON utilities using simple string manipulation.
-// NOT a full JSON parser - designed for speed and simplicity.
-//
+// JSON Builder and Parser - Simplified & Consolidated
 // =============================================================================
 
 #include "utils/json.hpp"
-#include <sstream>
 #include <cctype>
+#include <cstring>
 
 namespace json {
 
 // =============================================================================
-// JSON Building Functions
+// Building Functions
 // =============================================================================
 
 std::string escape(const std::string& s) {
-    std::string result;
-    result.reserve(s.length() + 16); // Pre-allocate for efficiency
+    std::string r;
+    r.reserve(s.length() + 16);
     for (char c : s) {
         switch (c) {
-            case '"':  result += "\\\""; break;
-            case '\\': result += "\\\\"; break;
-            case '\n': result += "\\n";  break;
-            case '\r': result += "\\r";  break;
-            case '\t': result += "\\t";  break;
-            default:   result += c;
+            case '"':  r += "\\\""; break;
+            case '\\': r += "\\\\"; break;
+            case '\n': r += "\\n";  break;
+            case '\r': r += "\\r";  break;
+            case '\t': r += "\\t";  break;
+            default:   r += c;
         }
     }
-    return result;
+    return r;
 }
 
-std::string str(const std::string& s) {
-    return "\"" + escape(s) + "\"";
-}
-
-std::string num(int n) {
-    return std::to_string(n);
-}
-
-std::string boolean(bool b) {
-    return b ? "true" : "false";
-}
+std::string str(const std::string& s) { return "\"" + escape(s) + "\""; }
+std::string num(int n) { return std::to_string(n); }
 
 std::string obj(const std::map<std::string, std::string>& kvs) {
-    std::string result = "{";
+    std::string r = "{";
     bool first = true;
     for (const auto& kv : kvs) {
-        if (!first) result += ",";
-        result += "\"" + kv.first + "\":" + kv.second;
+        if (!first) r += ",";
+        r += "\"" + kv.first + "\":" + kv.second;
         first = false;
     }
-    result += "}";
-    return result;
+    return r + "}";
 }
 
 std::string arr(const std::vector<std::string>& items) {
-    std::string result = "[";
+    std::string r = "[";
     for (size_t i = 0; i < items.size(); i++) {
-        if (i > 0) result += ",";
-        result += items[i];
+        if (i > 0) r += ",";
+        r += items[i];
     }
-    result += "]";
-    return result;
+    return r + "]";
 }
 
 std::string sanitize(const std::string& s) {
-    // Fix malformed JSON from external MCP servers
-    // 1. Remove extra braces like "(default: 5000})" in descriptions
-    // 2. Remove "$schema" field that Gemini API rejects
-    
     std::string result;
     result.reserve(s.length());
     bool in_string = false;
     
+    // Pass 1: Remove errant braces in strings
     for (size_t i = 0; i < s.length(); i++) {
         char c = s[i];
-        
-        // Track string boundaries (handle escaped quotes)
-        if (c == '"' && (i == 0 || s[i-1] != '\\')) {
-            in_string = !in_string;
-        }
-        
-        // Remove errant braces inside strings that would break JSON
-        if (in_string && c == '}') {
-            if (i + 1 < s.length() && s[i+1] == ')') {
-                continue;
-            }
-        }
-        
+        if (c == '"' && (i == 0 || s[i-1] != '\\')) in_string = !in_string;
+        if (in_string && c == '}' && i + 1 < s.length() && s[i+1] == ')') continue;
         result += c;
     }
     
-    // Remove "$schema" field (not supported by Gemini API)
-    // Pattern: "$schema":"..." or "$schema": "..."
-    std::string schema_pattern = "\"$schema\":";
-    size_t pos;
-    while ((pos = result.find(schema_pattern)) != std::string::npos) {
-        // Find the end of the value
-        size_t val_start = pos + schema_pattern.length();
-        while (val_start < result.length() && result[val_start] == ' ') val_start++;
-        
-        if (val_start < result.length() && result[val_start] == '"') {
-            // String value - find closing quote
-            size_t val_end = result.find('"', val_start + 1);
-            while (val_end != std::string::npos && result[val_end - 1] == '\\') {
-                val_end = result.find('"', val_end + 1);
+    // Pass 2: Remove unsupported fields ($schema, additionalProperties)
+    for (const auto& pattern : {"\"$schema\":", "\"additionalProperties\":"}) {
+        size_t pos;
+        while ((pos = result.find(pattern)) != std::string::npos) {
+            size_t end = pos + strlen(pattern);
+            while (end < result.length() && result[end] == ' ') end++;
+            
+            if (result[end] == '"') { // String value
+                end = result.find('"', end + 1);
+                while (end != std::string::npos && result[end - 1] == '\\')
+                    end = result.find('"', end + 1);
+                if (end != std::string::npos) end++;
+            } else { // Boolean or other
+                while (end < result.length() && result[end] != ',' && result[end] != '}') end++;
             }
-            if (val_end != std::string::npos) {
-                val_end++; // Include closing quote
-                // Check if followed by comma
-                if (val_end < result.length() && result[val_end] == ',') {
-                    val_end++;
-                }
-                result.erase(pos, val_end - pos);
-            }
+            
+            if (end < result.length() && result[end] == ',') end++;
+            size_t start = (pos > 0 && result[pos - 1] == ',') ? pos - 1 : pos;
+            result.erase(start, end - start);
         }
     }
     
-    // Remove "additionalProperties" field (not supported by Gemini API)
-    // Pattern: "additionalProperties":false or "additionalProperties":true
-    std::string addprops_pattern = "\"additionalProperties\":";
-    while ((pos = result.find(addprops_pattern)) != std::string::npos) {
-        size_t val_start = pos + addprops_pattern.length();
-        // Skip the boolean value (true or false)
-        size_t val_end = val_start;
-        while (val_end < result.length() && result[val_end] != ',' && result[val_end] != '}') {
-            val_end++;
-        }
-        // Check if followed by comma
-        if (val_end < result.length() && result[val_end] == ',') {
-            val_end++;
-        }
-        // Check for preceding comma (if this was last field)
-        size_t erase_start = pos;
-        if (pos > 0 && result[pos - 1] == ',') {
-            erase_start = pos - 1;
-        }
-        result.erase(erase_start, val_end - erase_start);
-    }
-    
-    // Clean up any trailing commas before } or ]
+    // Pass 3: Clean trailing commas
+    size_t pos = 0;
+    while ((pos = result.find(",}", pos)) != std::string::npos) result.erase(pos, 1);
     pos = 0;
-    while ((pos = result.find(",}", pos)) != std::string::npos) {
-        result.erase(pos, 1);
-    }
-    pos = 0;
-    while ((pos = result.find(",]", pos)) != std::string::npos) {
-        result.erase(pos, 1);
-    }
+    while ((pos = result.find(",]", pos)) != std::string::npos) result.erase(pos, 1);
     
     return result;
 }
 
 // =============================================================================
-// JSON Parsing Functions
+// Parsing Functions
 // =============================================================================
 
 namespace parse {
 
 std::string unescape(const std::string& s) {
-    std::string result;
-    result.reserve(s.length());
-    for (size_t i = 0; i < s.length(); ++i) {
+    std::string r;
+    r.reserve(s.length());
+    for (size_t i = 0; i < s.length(); i++) {
         if (s[i] == '\\' && i + 1 < s.length()) {
-            switch (s[i + 1]) {
-                case 'n':  result += '\n'; i++; break;
-                case 'r':  result += '\r'; i++; break;
-                case 't':  result += '\t'; i++; break;
-                case '"':  result += '"';  i++; break;
-                case '\\': result += '\\'; i++; break;
-                default:   result += s[i];
-            }
+            char n = s[++i];
+            r += (n == 'n' ? '\n' : n == 'r' ? '\r' : n == 't' ? '\t' : n);
         } else {
-            result += s[i];
+            r += s[i];
         }
     }
-    return result;
+    return r;
 }
 
 std::string get_string(const std::string& json, const std::string& key) {
@@ -256,146 +190,68 @@ bool get_bool(const std::string& json, const std::string& key) {
     size_t pos = json.find(search);
     if (pos == std::string::npos) return false;
     
-    // Skip to colon
     pos += search.length();
     while (pos < json.length() && json[pos] != ':') pos++;
-    if (pos >= json.length()) return false;
-    pos++; // Skip ':'
-    
-    // Skip whitespace
+    if (pos >= json.length()) return std::string::npos;
+    pos++;
     while (pos < json.length() && std::isspace(json[pos])) pos++;
+    return pos;
+}
+
+// Internal: Extract nested content (works for both {} and [])
+static std::string extract_nested(const std::string& json, size_t start, char open, char close) {
+    if (start >= json.length() || json[start] != open) return "";
     
-    // Check for true/false
-    if (json.compare(pos, 4, "true") == 0) return true;
-    return false;
+    int depth = 0;
+    size_t pos = start;
+    for (; pos < json.length(); pos++) {
+        if (json[pos] == open) depth++;
+        else if (json[pos] == close) {
+            if (--depth == 0) break;
+        }
+    }
+    return json.substr(start, pos - start + 1);
+}
+
+std::string get_string(const std::string& json, const std::string& key) {
+    size_t pos = find_value_pos(json, key);
+    if (pos == std::string::npos || json[pos] != '"') return "";
+    
+    size_t start = pos + 1;
+    size_t end = json.find('"', start);
+    while (end != std::string::npos && json[end - 1] == '\\')
+        end = json.find('"', end + 1);
+    
+    return (end == std::string::npos) ? "" : unescape(json.substr(start, end - start));
 }
 
 std::string get_object(const std::string& json, const std::string& key) {
-    // Handle special case: key is just "{" meaning find first object
-    if (key == "{") {
-        return first_object(json);
-    }
-    
-    // Find "key":
-    std::string search = "\"" + key + "\":";
-    size_t pos = json.find(search);
-    if (pos == std::string::npos) return "{}";
-    pos += search.length();
-    
-    // Skip whitespace
-    while (pos < json.length() && std::isspace(json[pos])) pos++;
-    
-    // Must start with {
-    if (pos >= json.length() || json[pos] != '{') return "{}";
-    
-    // Find matching closing brace
-    size_t start = pos;
-    int depth = 0;
-    for (; pos < json.length(); pos++) {
-        if (json[pos] == '{') depth++;
-        else if (json[pos] == '}') {
-            depth--;
-            if (depth == 0) break;
-        }
-    }
-    
-    return json.substr(start, pos - start + 1);
+    if (key == "{") return first_object(json);
+    size_t pos = find_value_pos(json, key);
+    std::string result = extract_nested(json, pos, '{', '}');
+    return result.empty() ? "{}" : result;
 }
 
 std::string get_array(const std::string& json, const std::string& key) {
-    // Find "key":
-    std::string search = "\"" + key + "\":";
-    size_t pos = json.find(search);
-    if (pos == std::string::npos) return "";
-    pos += search.length();
-    
-    // Skip whitespace
-    while (pos < json.length() && std::isspace(json[pos])) pos++;
-    
-    // Must start with [
-    if (pos >= json.length() || json[pos] != '[') return "";
-    
-    // Find matching closing bracket
-    size_t start = pos;
-    int depth = 0;
-    for (; pos < json.length(); pos++) {
-        if (json[pos] == '[') depth++;
-        else if (json[pos] == ']') {
-            depth--;
-            if (depth == 0) break;
-        }
-    }
-    
-    return json.substr(start, pos - start + 1);
+    size_t pos = find_value_pos(json, key);
+    return extract_nested(json, pos, '[', ']');
 }
 
-std::vector<std::string> get_string_array(const std::string& json, const std::string& key) {
-    std::vector<std::string> result;
-    std::string array_str = get_array(json, key);
-    if (array_str.empty() || array_str == "[]") return result;
-    
-    size_t pos = 1; // Skip '['
-    while (pos < array_str.length() - 1) {
-        // Find opening quote
-        size_t start = array_str.find("\"", pos);
-        if (start == std::string::npos || start >= array_str.length() - 1) break;
-        start++; // Skip opening quote
-        
-        // Find closing quote (handle escapes)
-        size_t end = array_str.find("\"", start);
-        while (end != std::string::npos && array_str[end - 1] == '\\') {
-            end = array_str.find("\"", end + 1);
-        }
-        if (end == std::string::npos) break;
-        
-        result.push_back(unescape(array_str.substr(start, end - start)));
-        
-        // Skip to next element
-        pos = end + 1;
-        while (pos < array_str.length() && (array_str[pos] == ',' || std::isspace(array_str[pos]))) {
-            pos++;
-        }
-    }
-    return result;
+std::string first_object(const std::string& json) {
+    size_t start = json.find('{');
+    if (start == std::string::npos) return "{}";
+    return extract_nested(json, start, '{', '}');
 }
 
 bool has_key(const std::string& json, const std::string& key) {
     return json.find("\"" + key + "\"") != std::string::npos;
 }
 
-std::string first_object(const std::string& json) {
-    size_t start = json.find("{");
-    if (start == std::string::npos) return "{}";
-    
-    int depth = 0;
-    size_t pos = start;
-    for (; pos < json.length(); pos++) {
-        if (json[pos] == '{') depth++;
-        else if (json[pos] == '}') {
-            depth--;
-            if (depth == 0) break;
-        }
-    }
-    
-    return json.substr(start, pos - start + 1);
-}
-
-} // namespace parse
-} // namespace json
-
-// =============================================================================
-// Legacy compatibility (json_parse namespace)
-// =============================================================================
-
-namespace json_parse {
-
-std::string extract_val(const std::string& json, const std::string& key) {
-    // This is a special legacy function that extracts raw numeric values
-    // Key format is like "\"id\":" 
-    size_t pos = json.find(key);
+std::string get_raw_value(const std::string& json, const std::string& key_pattern) {
+    size_t pos = json.find(key_pattern);
     if (pos == std::string::npos) return "";
     
-    size_t start = pos + key.length();
+    size_t start = pos + key_pattern.length();
     while (start < json.length() && (json[start] == ' ' || json[start] == ':')) start++;
     
     size_t end = start;
@@ -404,4 +260,28 @@ std::string extract_val(const std::string& json, const std::string& key) {
     return json.substr(start, end - start);
 }
 
-} // namespace json_parse
+std::vector<std::string> get_string_array(const std::string& json, const std::string& key) {
+    std::vector<std::string> result;
+    std::string arr = get_array(json, key);
+    if (arr.empty() || arr == "[]") return result;
+    
+    size_t pos = 1;
+    while (pos < arr.length() - 1) {
+        size_t start = arr.find('"', pos);
+        if (start == std::string::npos) break;
+        start++;
+        
+        size_t end = arr.find('"', start);
+        while (end != std::string::npos && arr[end - 1] == '\\')
+            end = arr.find('"', end + 1);
+        if (end == std::string::npos) break;
+        
+        result.push_back(unescape(arr.substr(start, end - start)));
+        pos = end + 1;
+        while (pos < arr.length() && (arr[pos] == ',' || std::isspace(arr[pos]))) pos++;
+    }
+    return result;
+}
+
+} // namespace parse
+} // namespace json
