@@ -149,10 +149,10 @@ int main(int argc, char **argv) {
     //     return 1;
     // }
 
-    printf("--- Before Modification ---\n");
-    for (int i = 0; i < argc; i++) {
-        printf("argv[%d]: %s\n", i, argv[i]);
-    }
+    // printf("--- Before Modification ---\n");
+    // for (int i = 0; i < argc; i++) {
+    //     printf("argv[%d]: %s\n", i, argv[i]);
+    // }
    
     // 2. Duplicate the input string
     // We do this because strtok modifies the string in-place (adding null terminators).
@@ -210,12 +210,12 @@ int main(int argc, char **argv) {
     // Note: The original argv[1] is now effectively removed/ignored
     argc = new_argc;
     argv = new_argv;
-    printf("argv:\n");
-    for(int i=0;i<argc;i++){
-        printf("%s\n",argv[i]);
-    }
+    // printf("argv:\n");
+    // for(int i=0;i<argc;i++){
+    //     printf("%s\n",argv[i]);
+    // }
     char *cmd_name = argv[1];
-    printf("CMD NAME : %s\n",cmd_name);
+    //printf("CMD NAME : %s\n",cmd_name);
     char *user = getenv("USER");
     if (!user) user = "unknown";
 
