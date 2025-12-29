@@ -8,8 +8,7 @@ class GeminiProvider : public LLMProvider {
 private:
     std::string api_key;
     std::string model_name;
-    std::vector<std::string> tools_json;
-    std::vector<std::string> registered_tool_names;
+    std::vector<std::string> tools_json;  // JSON representation for API
 
 public:
     GeminiProvider(const std::string& model, const std::string& key);
@@ -19,10 +18,8 @@ public:
     
     void addTool(const std::string& name, const std::string& description, 
                  const std::string& parameters) override;
+    
     std::string name() const override { return "gemini"; }
-    void clearTools() override { tools_json.clear(); registered_tool_names.clear(); tools.clear(); }
-    std::vector<Tool> getTools() const override { return tools; }
-
-private:
-    std::vector<Tool> tools;
+    void clearTools() override { tools.clear(); tools_json.clear(); }
+    // getTools() inherited from base class
 };
