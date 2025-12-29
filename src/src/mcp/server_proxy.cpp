@@ -141,7 +141,7 @@ std::string MCPServer::callTool(const std::string& tool_name, const std::string&
     
     // Only send exec_dangerous to internal os-assistant server, not to external MCP servers
     if (server_name == "os-assistant") {
-        params["exec_dangerous"] = exec_dangerous ? "YES" : "NO";
+        params["exec_dangerous"] = json::str(exec_dangerous ? "YES" : "NO");
     }
     
     std::string response = sendRequest("tools/call", json::obj(params));
