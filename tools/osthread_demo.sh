@@ -23,8 +23,8 @@ if [ $# -gt 0 ]; then
   exit 1
 fi
 
-bin_path="scripts/bin/thread_roles"
-src_path="scripts/c_src/thread_roles.c"
+bin_path="tools/bin/thread_roles"
+src_path="tools/c_src/thread_roles.c"
 
 if [ ! -x "$bin_path" ]; then
   if ! command -v gcc >/dev/null 2>&1; then

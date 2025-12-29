@@ -30,8 +30,8 @@ if [ $# -eq 1 ]; then
   fi
 fi
 
-bin_path="scripts/bin/sig_pingpong"
-src_path="scripts/c_src/sig_pingpong.c"
+bin_path="tools/bin/sig_pingpong"
+src_path="tools/c_src/sig_pingpong.c"
 
 if [ ! -x "$bin_path" ]; then
   if ! command -v gcc >/dev/null 2>&1; then
