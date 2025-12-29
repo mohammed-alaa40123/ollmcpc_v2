@@ -104,7 +104,7 @@ private:
     }
 
     std::string execute_tool(const std::string& script, const std::string& args_json, const std::string& tool_name) {
-        std::string cmd = tools_directory + "/" + script;
+        std::string cmd = tools_directory+"/dispatcher " +  tools_directory + "/" + script;
         std::vector<std::string> args;
         
         // Basic argument parsing leveraging json helper logic or manual (since logic was in ToolRunner)

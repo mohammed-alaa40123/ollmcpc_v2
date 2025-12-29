@@ -43,7 +43,7 @@ CommandMetadata internal_cmds[] = {
 
 
 const char *dangerous_binaries[] = {
-    "rm", "dd", "mkfs", "fdisk", "reboot", "shutdown", "chmod", "chown", NULL
+    "rm","rmdir", "dd", "mkfs", "fdisk", "reboot", "shutdown", "chmod", "chown","run_shell_command.sh", NULL
 };
 
 
@@ -143,9 +143,70 @@ void cmd_wipe(int argc, char **argv) {
 // --- Main Logic ---
 
 int main(int argc, char **argv) {
-    if (argc < 2) return 1;
+    // 1. Validation: Ensure exactly one argument is passed
+    // if (argc < 2) {
+    //     fprintf(stderr, "Usage: %s \"string to split\"\n", argv[0]);
+    //     return 1;
+    // }
 
+    printf("--- Before Modification ---\n");
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d]: %s\n", i, argv[i]);
+    }
+
+    // 2. Duplicate the input string
+    // We do this because strtok modifies the string in-place (adding null terminators).
+    // We want a heap-allocated copy so we don't mess with the original stack/env memory.
+    char *input_copy = strdup(argv[2]);
+    if (!input_copy) {
+        perror("strdup failed");
+        return 1;
+    }
+
+    // 3. Count the number of tokens (spaces)
+    int token_count = 0;
+    char *temp_str = strdup(input_copy); // Temp copy just for counting
+    char *token = strtok(temp_str, " ");
+    while (token != NULL) {
+        token_count++;
+        token = strtok(NULL, " ");
+    }
+    free(temp_str); // Clean up temp copy
+
+    // 4. Allocate memory for the new argv array
+    // Size = 1 (program name) + token_count + 1 (NULL terminator)
+    char **new_argv = malloc((token_count + 2) * sizeof(char *));
+    if (!new_argv) {
+        perror("malloc failed");
+        return 1;
+    }
+
+    // 5. Build the new argv list
+    int new_argc = 0;
+    
+    // Keep the program name (argv[0])
+    new_argv[new_argc++] = argv[0];
+
+    // Tokenize the input_copy and add pointers to new_argv
+    token = strtok(input_copy, " ");
+    while (token != NULL) {
+        new_argv[new_argc++] = token;
+        token = strtok(NULL, " ");
+    }
+    
+    // Null terminate the array (standard convention for argv)
+    new_argv[new_argc] = NULL;
+
+    // 6. Update main's variables to point to the new data
+    // Note: The original argv[1] is now effectively removed/ignored
+    argc = new_argc;
+    argv = new_argv;
+    printf("argv:\n");
+    for(int i=0;i<argc;i++){
+        printf("%s\n",argv[i]);
+    }
     char *cmd_name = argv[1];
+    printf("CMD NAME : %s\n",cmd_name);
     char *user = getenv("USER");
     if (!user) user = "unknown";
 
