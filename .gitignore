@@ -3,3 +3,4 @@ debug.log
 tools/dispatcher
 logger.txt
 .gitignore
+system_audit.log
