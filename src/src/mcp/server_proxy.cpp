@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
-
+#include <cstdlib>
 MCPServer::MCPServer(const std::string& name) : server_name(name), request_id(0), pid(-1) {}
 
 MCPServer::~MCPServer() {
@@ -134,11 +134,18 @@ std::string MCPServer::listTools() {
     return sendRequest("tools/list", "{}");
 }
 
-std::string MCPServer::callTool(const std::string& tool_name, const std::string& arguments) {
+std::string MCPServer::callTool(const std::string& tool_name, const std::string& arguments,int exec_dangerous) {
     std::map<std::string, std::string> params;
     params["name"] = json::str(tool_name);
     params["arguments"] = arguments;
-    
+    params["exec_dangerous"]=exec_dangerous?"YES":"NO";
+     
+    std::system("echo \"Entering the exec dangerous var from proxy\" >> logger.txt");
+    std::string command = "echo " + params["exec_dangerous"] + ">>logger.txt";
+    std::system(command.c_str());
+    std::system("echo json >> logger.txt");
+    command = "echo " + json::obj(params) + ">>logger.txt";
+    std::system(command.c_str());
     std::string response = sendRequest("tools/call", json::obj(params));
     
     // Check for JSON-RPC error first
