@@ -296,7 +296,8 @@ void run_interactive_session(MCPClient& client) {
                  // Skip if empty or if server doesn't know this tool
                  if (!r.empty() && 
                      r.find("Unknown tool") == std::string::npos &&
-                     r.find("not found") == std::string::npos) {
+                     r.find("not found") == std::string::npos &&
+                     r.find("MCP error") == std::string::npos) {
                      raw_result = r;
                      success = true;
                      break;

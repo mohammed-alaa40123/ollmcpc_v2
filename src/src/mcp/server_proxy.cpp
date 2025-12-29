@@ -99,7 +99,7 @@ std::string MCPServer::readResponse() {
     // We expect JSON-RPC messages to be on a single line ending in \n
     // Many servers print logs or npx info to stdout, so we skip non-JSON lines
     
-    int retries = 50; // Try reading for a few seconds
+    int retries = 300; // Try reading for up to 30 seconds (slow APIs like Monica AI)
     while (retries-- > 0) {
         line = "";
         bool found_json = false;
@@ -140,6 +140,12 @@ std::string MCPServer::callTool(const std::string& tool_name, const std::string&
     params["arguments"] = arguments;
     
     std::string response = sendRequest("tools/call", json::obj(params));
+    
+    // Check for JSON-RPC error first
+    std::string error_msg = json::parse::get_string(response, "message");
+    if (!error_msg.empty()) {
+        return "MCP error: " + error_msg;
+    }
     
     // Extract the text content from the response
     std::string content_array = json_parse::extract_array(response, "content");
