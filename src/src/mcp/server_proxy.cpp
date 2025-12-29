@@ -1,10 +1,10 @@
 #include "mcp/server_proxy.hpp"
 #include "utils/json.hpp"
+#include "utils/jsonrpc.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
-#include <map>
 
 MCPServer::MCPServer(const std::string& name) : server_name(name), request_id(0), pid(-1) {}
 
@@ -79,25 +79,13 @@ bool MCPServer::initialize() {
 
 std::string MCPServer::sendRequest(const std::string& method, const std::string& params) {
     int id = ++request_id;
-    std::map<std::string, std::string> msg;
-    msg["jsonrpc"] = json::str("2.0");
-    msg["id"] = json::num(id);
-    msg["method"] = json::str(method);
-    msg["params"] = params;
-    
-    std::string json_msg = json::obj(msg) + "\n";
+    std::string json_msg = jsonrpc::request(id, method, params) + "\n";
     write(stdin_pipe[1], json_msg.c_str(), json_msg.length());
-    
     return readResponse();
 }
 
 void MCPServer::sendNotification(const std::string& method, const std::string& params) {
-    std::map<std::string, std::string> msg;
-    msg["jsonrpc"] = json::str("2.0");
-    msg["method"] = json::str(method);
-    msg["params"] = params;
-    
-    std::string json_msg = json::obj(msg) + "\n";
+    std::string json_msg = jsonrpc::notification(method, params) + "\n";
     write(stdin_pipe[1], json_msg.c_str(), json_msg.length());
 }
 
@@ -111,7 +99,7 @@ std::string MCPServer::readResponse() {
     // We expect JSON-RPC messages to be on a single line ending in \n
     // Many servers print logs or npx info to stdout, so we skip non-JSON lines
     
-    int retries = 50; // Try reading for a few seconds
+    int retries = 300; // Try reading for up to 30 seconds (slow APIs like Monica AI)
     while (retries-- > 0) {
         line = "";
         bool found_json = false;
@@ -152,6 +140,12 @@ std::string MCPServer::callTool(const std::string& tool_name, const std::string&
     params["arguments"] = arguments;
     
     std::string response = sendRequest("tools/call", json::obj(params));
+    
+    // Check for JSON-RPC error first
+    std::string error_msg = json::parse::get_string(response, "message");
+    if (!error_msg.empty()) {
+        return "MCP error: " + error_msg;
+    }
     
     // Extract the text content from the response
     std::string content_array = json_parse::extract_array(response, "content");

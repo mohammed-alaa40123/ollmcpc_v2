@@ -25,16 +25,16 @@ Config Config::load_default() {
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     
     // Simple parsing (robust parser would use a library)
-    std::string provider = json_parse::extract_string(content, "default_provider");
+    std::string provider = json::parse::get_string(content, "default_provider");
     if (!provider.empty()) config.default_provider = provider;
     
-    std::string omodel = json_parse::extract_string(content, "ollama_model");
+    std::string omodel = json::parse::get_string(content, "ollama_model");
     if (!omodel.empty()) config.ollama_model = omodel;
     
-    std::string gkey = json_parse::extract_string(content, "gemini_api_key");
+    std::string gkey = json::parse::get_string(content, "gemini_api_key");
     if (!gkey.empty()) config.gemini_api_key = gkey;
 
-    std::string gmodel = json_parse::extract_string(content, "gemini_model");
+    std::string gmodel = json::parse::get_string(content, "gemini_model");
     if (!gmodel.empty()) config.gemini_model = gmodel;
     
     // HIL
@@ -46,18 +46,18 @@ Config Config::load_default() {
     }
     
     // Servers
-    std::string servers_arr = json_parse::extract_array(content, "servers");
+    std::string servers_arr = json::parse::get_array(content, "servers");
     if (!servers_arr.empty() && servers_arr != "[]") {
         size_t pos = 1; // skip '['
         while (pos < servers_arr.length() - 1) {
             size_t start = servers_arr.find("{", pos);
             if (start == std::string::npos || start >= servers_arr.length() - 1) break;
             
-            std::string obj = json_parse::extract_json_object(servers_arr.substr(start), "{");
+            std::string obj = json::parse::first_object(servers_arr.substr(start));
             if (obj != "{}") {
                 MCPServerConfig s;
-                s.name = json_parse::extract_string(obj, "name");
-                s.command = json_parse::extract_string_array(obj, "command");
+                s.name = json::parse::get_string(obj, "name");
+                s.command = json::parse::get_string_array(obj, "command");
                 
                 // Parse enabled (default true)
                 s.enabled = true;

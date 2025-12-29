@@ -1,4 +1,5 @@
 #include "utils/json.hpp"
+#include "utils/jsonrpc.hpp"
 #include "utils/logger.hpp"
 #include <iostream>
 #include <string>
@@ -52,23 +53,24 @@ private:
 
     void process_request(const std::string& json_req) {
         utils::Logger::debug("Server received: " + json_req);
-        std::string id = json_parse::extract_val(json_req, "\"id\":");
-        std::string method = json_parse::extract_string(json_req, "method");
         
-        if (id.empty()) {
-            utils::Logger::debug("Request ignored (no ID)");
+        // Parse JSON-RPC request
+        auto req = jsonrpc::parse_request(json_req);
+        
+        if (req.is_notification) {
+            utils::Logger::debug("Request ignored (notification)");
             return; 
         }
         
         std::string result = "{}";
         
-        if (method == "initialize") {
+        if (req.method == "initialize") {
             result = R"({
                 "protocolVersion": "2024-11-05",
                 "serverInfo": {"name": "c-mcp-server", "version": "1.2"},
                 "capabilities": {"tools": {}}
             })";
-        } else if (method == "tools/list") {
+        } else if (req.method == "tools/list") {
             result = "{\"tools\": [";
             for (size_t i = 0; i < tools_metadata.size(); ++i) {
                 if (i > 0) result += ",";
@@ -77,9 +79,9 @@ private:
                           ",\"inputSchema\":" + tools_metadata[i].inputSchema + "}";
             }
             result += "]}";
-        } else if (method == "tools/call") {
-             std::string name = json_parse::extract_string(json_req, "name");
-             std::string args_json = json_parse::extract_json_object(json_req, "\"arguments\"");
+        } else if (req.method == "tools/call") {
+             std::string name = json::parse::get_string(req.params, "name");
+             std::string args_json = json::parse::get_object(req.params, "arguments");
              
              utils::Logger::debug("Lookup tool: [" + name + "]");
              
@@ -97,7 +99,8 @@ private:
              }
         }
         
-        std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << id << ",\"result\":" << result << "}" << std::endl;
+        // Send JSON-RPC response
+        std::cout << jsonrpc::response(req.id, result) << std::endl;
     }
 
     std::string execute_tool(const std::string& script, const std::string& args_json, const std::string& tool_name) {
