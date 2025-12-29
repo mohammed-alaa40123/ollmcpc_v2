@@ -134,18 +134,16 @@ std::string MCPServer::listTools() {
     return sendRequest("tools/list", "{}");
 }
 
-std::string MCPServer::callTool(const std::string& tool_name, const std::string& arguments,int exec_dangerous) {
+std::string MCPServer::callTool(const std::string& tool_name, const std::string& arguments, int exec_dangerous) {
     std::map<std::string, std::string> params;
     params["name"] = json::str(tool_name);
     params["arguments"] = arguments;
-    params["exec_dangerous"]=exec_dangerous?"YES":"NO";
-     
-    std::system("echo \"Entering the exec dangerous var from proxy\" >> logger.txt");
-    std::string command = "echo " + params["exec_dangerous"] + ">>logger.txt";
-    std::system(command.c_str());
-    std::system("echo json >> logger.txt");
-    command = "echo " + json::obj(params) + ">>logger.txt";
-    std::system(command.c_str());
+    
+    // Only send exec_dangerous to internal os-assistant server, not to external MCP servers
+    if (server_name == "os-assistant") {
+        params["exec_dangerous"] = exec_dangerous ? "YES" : "NO";
+    }
+    
     std::string response = sendRequest("tools/call", json::obj(params));
     
     // Check for JSON-RPC error first
