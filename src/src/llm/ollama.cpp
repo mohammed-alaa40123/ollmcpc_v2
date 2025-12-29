@@ -10,10 +10,7 @@ OllamaProvider::OllamaProvider(const std::string& model)
 
 void OllamaProvider::addTool(const std::string& name, const std::string& description, 
                              const std::string& parameters) {
-    for (const auto& existing : registered_tool_names) {
-        if (existing == name) return;
-    }
-    registered_tool_names.push_back(name);
+    if (hasToolNamed(name)) return;
 
     std::map<std::string, std::string> func;
     func["name"] = json::str(name);
