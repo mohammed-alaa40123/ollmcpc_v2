@@ -3,6 +3,7 @@
 #include "llm/provider_factory.hpp"
 #include "utils/json.hpp"
 #include "utils/terminal.hpp"
+#include "utils/logger.hpp"
 #include <iostream>
 #include <algorithm>
 #include <thread>
@@ -300,9 +301,11 @@ void run_interactive_session(MCPClient& client) {
             // Execution phase
             std::string raw_result = "";
             bool success = false;
+            utils::Logger::debug("Trying " + std::to_string(client.getServers().size()) + " servers for tool: " + tool_name);
             for (const auto& server : client.getServers()) {
-                 std::cout<<"exec dangerous:"<<exec_dangerous<<std::endl;
-                 std::string r = server->callTool(tool_name, tool_args,exec_dangerous);
+                 utils::Logger::debug("Trying server: " + server->getName());
+                 std::string r = server->callTool(tool_name, tool_args, exec_dangerous);
+                 utils::Logger::debug("Server " + server->getName() + " returned: " + (r.length() > 100 ? r.substr(0, 100) : r));
                  // Skip if empty or if server doesn't know this tool
                  if (!r.empty() && 
                      r.find("Unknown tool") == std::string::npos &&

@@ -1,0 +1,7 @@
+[Mon Dec 29 19:10:02 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/get_top_cpu.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:11:17 2025] USER:malaa CMD:rmdir STATUS:ABORTED MSG:User declined warning
+[Mon Dec 29 19:33:12 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/get_active_connections.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:48:19 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/get_top_cpu.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:48:23 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/system_uptime.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:48:30 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/check_port_usage.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:48:36 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/check_port_usage.sh STATUS:ALLOWED MSG:Passing to execution engine
