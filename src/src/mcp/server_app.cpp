@@ -38,15 +38,28 @@ private:
     
     // Hardcoded tool definitions
     std::vector<ToolMeta> tools_metadata = {
-        {"osassist_battery_info", "osassist_battery_info.sh", "Show battery and memory info", R"({"type":"object","properties":{}})"},
-        {"osassist_memory_info", "osassist_memory_info.sh", "Show memory and battery info", R"({"type":"object","properties":{}})"},
-        {"osecho_plus", "osecho_plus.sh", "Print a message with optional level and timestamp", R"({"type":"object","properties":{"message":{"type":"string"},"level":{"type":"string"},"ts":{"type":"boolean"},"log":{"type":"string"}}})"},
-        {"osenv_guard", "osenv_guard.sh", "Show environment variables with redacted secrets", R"({"type":"object","properties":{}})"},
-        {"osmem_heapstack_range", "osmem_heapstack_range.sh", "Show heap and stack ranges for a PID", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
-        {"osmem_usage", "osmem_usage.sh", "Show memory summary and status", R"({"type":"object","properties":{}})"},
-        {"osnet_basic", "osnet_basic.sh", "Show basic network status", R"({"type":"object","properties":{}})"},
-        {"osproc_children_list", "osproc_children_list.sh", "Show child processes as a tree", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
-        {"osproc_find", "osproc_find.sh", "Find processes by name pattern", R"({"type":"object","properties":{"pattern":{"type":"string"}},"required":["pattern"]})"},
+        // {"osassist_battery_info", "osassist_battery_info.sh", "Show battery and memory info", R"({"type":"object","properties":{}})"},
+        // {"osassist_memory_info", "osassist_memory_info.sh", "Show memory and battery info", R"({"type":"object","properties":{}})"},
+        // {"osecho_plus", "osecho_plus.sh", "Print a message with optional level and timestamp", R"({"type":"object","properties":{"message":{"type":"string"},"level":{"type":"string"},"ts":{"type":"boolean"},"log":{"type":"string"}}})"},
+        // {"osenv_guard", "osenv_guard.sh", "Show environment variables with redacted secrets", R"({"type":"object","properties":{}})"},
+        // {"oswhoami", "oswhoami.sh", "Show current user and environment info", R"({"type":"object","properties":{}})"},
+        // {"osps", "osps.sh", "List processes sorted by CPU usage", R"({"type":"object","properties":{}})"},
+        // {"osproctree", "osproctree.sh", "Show a process tree for a PID", R"({"type":"object","properties":{"pid":{"type":"integer"}}})"},
+        // {"oskillsafe", "oskillsafe.sh", "Safely terminate a process by PID", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
+        // {"osstop", "osstop.sh", "Stop a process by PID", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
+        // {"oscont", "oscont.sh", "Resume a stopped process by PID", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
+        // {"osspawnchildren", "osspawnchildren.sh", "Spawn child processes for demo", R"({"type":"object","properties":{"number":{"type":"integer"},"command":{"type":"string"},"nowait":{"type":"boolean"}}})"},
+        // {"osorphan", "osorphan.sh", "Run orphan process demo", R"({"type":"object","properties":{}})"},
+        // {"oszombie", "oszombie.sh", "Run zombie process demo", R"({"type":"object","properties":{}})"},
+        // {"ostreedemo", "ostreedemo.sh", "Run fork tree demo", R"({"type":"object","properties":{}})"},
+        // {"oshelp", "oshelp.sh", "Show Mini-OS help and demos", R"({"type":"object","properties":{"command":{"type":"string"},"arg":{"type":"string"}}})"},
+        // {"osdiskfree", "osdiskfree.sh", "Show disk usage for a path", R"({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})"},
+        // {"osdir_size_top", "osdir_size_top.sh", "Show largest items in a directory", R"({"type":"object","properties":{}})"},
+        // {"osmem_heapstack_range", "osmem_heapstack_range.sh", "Show heap and stack ranges for a PID", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
+        // {"osmem_usage", "osmem_usage.sh", "Show memory summary and status", R"({"type":"object","properties":{}})"},
+        // {"osnet_basic", "osnet_basic.sh", "Show basic network status", R"({"type":"object","properties":{}})"},
+        // {"osproc_children_list", "osproc_children_list.sh", "Show child processes as a tree", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
+        // {"osproc_find", "osproc_find.sh", "Find processes by name pattern", R"({"type":"object","properties":{"pattern":{"type":"string"}},"required":["pattern"]})"},
         {"osproc_openfiles", "osproc_openfiles.sh", "Show open files for a process", R"({"type":"object","properties":{"pid":{"type":"integer"}},"required":["pid"]})"},
         {"osshm_list", "osshm_list.sh", "List shared memory segments", R"({"type":"object","properties":{}})"},
         {"ossig_pingpong", "ossig_pingpong.sh", "Run the signal ping-pong demo", R"({"type":"object","properties":{"rounds":{"type":"integer"}}})"},
@@ -125,10 +138,16 @@ private:
                    tool_name == "process_state" ||
                    tool_name == "osproc_children_list" ||
                    tool_name == "osproc_openfiles" ||
-                   tool_name == "osmem_heapstack_range") {
+                   tool_name == "osmem_heapstack_range" ||
+                   tool_name == "osstop" ||
+                   tool_name == "oscont" ||
+                   tool_name == "oskillsafe") {
              std::string pid = json_parse::extract_string(args_json, "pid");
              if (pid.empty()) {
                  pid = json_parse::extract_string(args_json, "value");
+             }
+             if (pid.empty()) {
+                 pid = json_parse::extract_val(args_json, "\"pid\":");
              }
              if (pid.empty() && tool_name == "osproc_openfiles") {
                  pid = json_parse::extract_string(args_json, "path");
@@ -160,6 +179,53 @@ private:
                  rounds = json_parse::extract_string(args_json, "value");
              }
              if (!rounds.empty()) args.push_back(rounds);
+        } else if (tool_name == "osproctree") {
+             std::string pid = json_parse::extract_string(args_json, "pid");
+             if (pid.empty()) {
+                 pid = json_parse::extract_string(args_json, "value");
+             }
+             if (pid.empty()) {
+                 pid = json_parse::extract_val(args_json, "\"pid\":");
+             }
+             if (!pid.empty()) args.push_back(pid);
+        } else if (tool_name == "osspawnchildren") {
+             std::string count = json_parse::extract_string(args_json, "number");
+             std::string command = json_parse::extract_string(args_json, "command");
+             std::string nowait = json_parse::extract_string(args_json, "nowait");
+             if (count.empty()) {
+                 count = json_parse::extract_string(args_json, "value");
+             }
+             if (count.empty()) {
+                 count = json_parse::extract_val(args_json, "\"number\":");
+             }
+             if (nowait.empty()) {
+                 nowait = json_parse::extract_val(args_json, "\"nowait\":");
+             }
+             if (!count.empty()) {
+                 args.push_back("--number");
+                 args.push_back(count);
+             }
+             if (!command.empty()) {
+                 args.push_back("--command");
+                 args.push_back(command);
+             }
+             if (nowait == "true" || nowait == "1") {
+                 args.push_back("--nowait");
+             }
+        } else if (tool_name == "oshelp") {
+             std::string command = json_parse::extract_string(args_json, "command");
+             std::string arg = json_parse::extract_string(args_json, "arg");
+             if (command.empty()) {
+                 command = json_parse::extract_string(args_json, "value");
+             }
+             if (!command.empty()) args.push_back(command);
+             if (!arg.empty()) args.push_back(arg);
+        } else if (tool_name == "osdiskfree") {
+             std::string path = json_parse::extract_string(args_json, "path");
+             if (path.empty()) {
+                 path = json_parse::extract_string(args_json, "value");
+             }
+             if (!path.empty()) args.push_back(path);
         } else if (tool_name == "osecho_plus") {
              std::string level = json_parse::extract_string(args_json, "level");
              std::string log = json_parse::extract_string(args_json, "log");
