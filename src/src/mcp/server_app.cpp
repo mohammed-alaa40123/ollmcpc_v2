@@ -9,7 +9,7 @@
 #include <memory>
 #include <array>
 #include <cstdio>
-
+#include <cstdlib>
 class MCPServerApp {
 public:
     MCPServerApp() : tools_directory("/usr/local/share/ollmcpc/tools") {
@@ -53,7 +53,9 @@ private:
 
     void process_request(const std::string& json_req) {
         utils::Logger::debug("Server received: " + json_req);
-        
+        std::system("echo request >> logger.txt");
+        std::string command = "echo " + json_req + ">>logger.txt";
+        std::system(command.c_str());
         // Parse JSON-RPC request
         auto req = jsonrpc::parse_request(json_req);
         
@@ -80,9 +82,22 @@ private:
             }
             result += "]}";
         } else if (req.method == "tools/call") {
+            std::system("echo parameters >> logger.txt");
+            std::string command = "echo " + req.params + ">>logger.txt";
+            std::system(command.c_str());
              std::string name = json::parse::get_string(req.params, "name");
+             std::string exec_dangerous = json::parse::get_string(req.params, "exec_dangerous");
              std::string args_json = json::parse::get_object(req.params, "arguments");
              
+             std::system("echo name >> logger.txt");
+            command = "echo " + name + ">>logger.txt";
+            std::system(command.c_str());
+            std::system("echo args >> logger.txt");
+            command = "echo " + args_json + ">>logger.txt";
+            std::system(command.c_str());
+            std::system("echo exec dangerous >> logger.txt");
+            command = "echo " + exec_dangerous + ">>logger.txt";
+            std::system(command.c_str());
              utils::Logger::debug("Lookup tool: [" + name + "]");
              
              // Find tool
@@ -91,7 +106,8 @@ private:
              
              if (it != tools_metadata.end()) {
                  utils::Logger::debug("Executing " + it->name);
-                 std::string output = execute_tool(it->script, args_json, it->name);
+                 
+                 std::string output = execute_tool(it->script, args_json, it->name,exec_dangerous);
                  result = "{\"content\":[{\"type\":\"text\",\"text\":" + json::str(output) + "}]}";
              } else {
                  utils::Logger::error("Tool not found: [" + name + "]");
@@ -103,8 +119,11 @@ private:
         std::cout << jsonrpc::response(req.id, result) << std::endl;
     }
 
-    std::string execute_tool(const std::string& script, const std::string& args_json, const std::string& tool_name) {
-        std::string cmd = tools_directory+"/dispatcher " +  tools_directory + "/" + script;
+    std::string execute_tool(const std::string& script, const std::string& args_json, const std::string& tool_name,std::string exec_dangerous) {
+        std::system("echo \"Entering the exec dangerous var from app\" >> logger.txt");
+        std::string command = "echo " + exec_dangerous + ">>logger.txt";
+        std::system(command.c_str());
+        std::string cmd = tools_directory+"/dispatcher " + ((exec_dangerous=="YES")?"-y":"-n") + " "+  tools_directory + "/" + script;
         std::vector<std::string> args;
         
         // Basic argument parsing leveraging json helper logic or manual (since logic was in ToolRunner)
