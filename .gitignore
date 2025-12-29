@@ -5,3 +5,4 @@ logger.txt
 .gitignore
 system_audit.log
 src/src/mcp/logger.txt
+system_audit.log

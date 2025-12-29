@@ -5,3 +5,7 @@
 [Mon Dec 29 19:48:23 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/system_uptime.sh STATUS:ALLOWED MSG:Passing to execution engine
 [Mon Dec 29 19:48:30 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/check_port_usage.sh STATUS:ALLOWED MSG:Passing to execution engine
 [Mon Dec 29 19:48:36 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/check_port_usage.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:59:10 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/get_top_cpu.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 19:59:31 2025] USER:malaa CMD:echo STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 20:00:02 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/get_top_cpu.sh STATUS:ALLOWED MSG:Passing to execution engine
+[Mon Dec 29 20:00:10 2025] USER:malaa CMD:/usr/local/share/ollmcpc/tools/list_directory.sh STATUS:ALLOWED MSG:Passing to execution engine
