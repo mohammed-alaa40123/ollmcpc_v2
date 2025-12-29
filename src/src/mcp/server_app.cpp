@@ -46,8 +46,8 @@ private:
         {"get_process_tree", "get_process_tree.sh", "Show process tree", R"({"type":"object","properties":{"pid":{"type":"integer"}}})"},
         {"check_io_status", "check_io_status.sh", "Check system IO", R"({"type":"object","properties":{}})"},
         {"get_active_connections", "get_active_connections.sh", "List network connections", R"({"type":"object","properties":{}})"},
-        {"run_shell_command", "run_shell_command.sh", "Run a shell command", R"({"type":"object","properties":{"command":{"type":"string"}},"required":["command"]})"},
-        {"run_secure_shell_command", "dispatcher", "Run a shell command in a secure way and it regards admin priverlages", R"({"type":"object","properties":{"command":{"type":"string"}},"required":["command"]})"}
+        {"run_shell_command", "run_shell_command.sh", "Run a shell command", R"({"type":"object","properties":{"command":{"type":"string"}},"required":["command"]})"}
+        
     };
 
 
