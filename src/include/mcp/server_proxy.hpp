@@ -23,7 +23,7 @@ public:
 
     bool connect(const std::vector<std::string>& command);
     std::string listTools();
-    std::string callTool(const std::string& tool_name, const std::string& arguments);
+    std::string callTool(const std::string& tool_name, const std::string& arguments,int exec_dangerous);
     void disconnect();
 
     std::string getName() const { return server_name; }

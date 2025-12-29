@@ -44,7 +44,7 @@ void run_interactive_session(MCPClient& client) {
     std::cout << "\033[2J\033[H" << std::flush;
     term::print_header("OLLMCPC PREMIUM v3.6", term::CYAN);
     std::cout << "  Type " << term::BOLD << "/help" << term::RESET << " for list of commands.\n";
-
+    int exec_dangerous;
     while (true) {
         LLMProvider* llm = client.getLLM();
         std::string p_name = llm->name();
@@ -266,7 +266,7 @@ void run_interactive_session(MCPClient& client) {
                     }
                 }
             }
-
+            exec_dangerous=0;
             // Access Control (HIL)
             bool approved = true;
             if (is_manual) {
@@ -279,6 +279,15 @@ void run_interactive_session(MCPClient& client) {
                 if (!app_in.empty() && app_in != "y" && app_in != "Y") {
                     approved = false;
                 }
+                if(approved){
+                std::cout << "  " << term::BOLD << "if the action is classified dangerous will you execute it? ([y]/n): ";
+                std::getline(std::cin, app_in);
+                if (app_in == "y" || app_in == "Y") {
+                    exec_dangerous = 1;
+                }
+                
+                }
+                
             } else {
                 term::draw_box("AUTO-EXECUTING", tool_name + "...", term::CYAN);
             }
@@ -292,7 +301,8 @@ void run_interactive_session(MCPClient& client) {
             std::string raw_result = "";
             bool success = false;
             for (const auto& server : client.getServers()) {
-                 std::string r = server->callTool(tool_name, tool_args);
+                 std::cout<<"exec dangerous:"<<exec_dangerous<<std::endl;
+                 std::string r = server->callTool(tool_name, tool_args,exec_dangerous);
                  // Skip if empty or if server doesn't know this tool
                  if (!r.empty() && 
                      r.find("Unknown tool") == std::string::npos &&

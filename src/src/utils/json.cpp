@@ -115,11 +115,80 @@ std::string unescape(const std::string& s) {
     return r;
 }
 
-// Internal: Find key position and skip to value
-static size_t find_value_pos(const std::string& json, const std::string& key) {
+std::string get_string(const std::string& json, const std::string& key) {
+    // 1. Find "key" (Removed quotes from search)
+    // Note: This is a simple search. In a complex string, this might find substrings (e.g., finding "me" inside "name").
+    size_t pos = json.find(key);
+    if (pos == std::string::npos) return "";
+
+    // 2. Skip to colon
+    // We start searching from the end of the key found
+    pos += key.length(); 
+    while (pos < json.length() && json[pos] != ':') pos++;
+    if (pos >= json.length()) return "";
+    pos++; // Skip ':'
+
+    // 3. Skip whitespace
+    while (pos < json.length() && std::isspace(json[pos])) pos++;
+    if (pos >= json.length()) return "";
+
+    // 4. Handle Quoted vs Unquoted Values
+    if (json[pos] == '"') {
+        // --- Standard Quoted Logic ---
+        size_t start = pos + 1;
+        size_t end = json.find("\"", start);
+        while (end != std::string::npos && json[end - 1] == '\\') {
+            end = json.find("\"", end + 1);
+        }
+        if (end == std::string::npos) return "";
+        // Assuming unescape() is defined elsewhere
+        return unescape(json.substr(start, end - start));
+    } else {
+        // --- Modified Unquoted Logic ---
+        size_t start = pos;
+        
+        // Read until the next delimiter (comma or closing brace)
+        // We look for the first occurrence of either ',' or '}'
+        size_t end = json.find_first_of(",}", start);
+        
+        if (end == std::string::npos) {
+            // If no delimiter found, maybe it's at the very end of string
+            return json.substr(start);
+        }
+        
+        return json.substr(start, end - start);
+    }
+}
+
+int get_int(const std::string& json, const std::string& key) {
+    // Find "key":
     std::string search = "\"" + key + "\"";
     size_t pos = json.find(search);
-    if (pos == std::string::npos) return std::string::npos;
+    if (pos == std::string::npos) return 0;
+    
+    // Skip to colon
+    pos += search.length();
+    while (pos < json.length() && json[pos] != ':') pos++;
+    if (pos >= json.length()) return 0;
+    pos++; // Skip ':'
+    
+    // Skip whitespace
+    while (pos < json.length() && std::isspace(json[pos])) pos++;
+    
+    // Parse number (may have leading minus)
+    size_t start = pos;
+    if (pos < json.length() && json[pos] == '-') pos++;
+    while (pos < json.length() && std::isdigit(json[pos])) pos++;
+    
+    if (pos == start) return 0;
+    return std::stoi(json.substr(start, pos - start));
+}
+
+bool get_bool(const std::string& json, const std::string& key) {
+    // Find "key":
+    std::string search = "\"" + key + "\"";
+    size_t pos = json.find(search);
+    if (pos == std::string::npos) return false;
     
     pos += search.length();
     while (pos < json.length() && json[pos] != ':') pos++;
