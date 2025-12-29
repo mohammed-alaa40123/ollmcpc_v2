@@ -5,9 +5,7 @@
 
 void ManualProvider::addTool(const std::string& name, const std::string& description, 
                              const std::string& parameters) {
-    for (const auto& t : tools) {
-        if (t.name == name) return;
-    }
+    if (hasToolNamed(name)) return;
     tools.push_back({name, description, parameters});
 }
 
