@@ -10,7 +10,14 @@ Show heap and stack address ranges from /proc/PID/maps.
 EOF
 }
 
-if [ $# -eq 0 ] || [ "$1" = "--help" ]; then
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
+if [ $# -eq 0 ]; then
   usage
   exit 0
 fi
@@ -22,12 +29,10 @@ if [ $# -ne 1 ]; then
 fi
 
 pid="$1"
-case "$pid" in
-  ''|*[!0-9]*)
-    echo "Error: PID must be a positive integer" >&2
-    exit 1
-    ;;
-esac
+if [ -z "$pid" ] || [ "${pid#*[!0-9]*}" != "$pid" ]; then
+  echo "Error: PID must be a positive integer" >&2
+  exit 1
+fi
 
 if ! kill -0 "$pid" 2>/dev/null; then
   echo "Error: process not found or not accessible: $pid" >&2
@@ -45,7 +50,7 @@ if [ -z "$lines" ]; then
   exit 1
 fi
 
-echo "Range               Perms Segment"
+echo "Range               Perms Segment"  
 printf '%s\n' "$lines" | while read -r range perms segment; do
   printf '%-18s %-5s %s\n' "$range" "$perms" "$segment"
 done

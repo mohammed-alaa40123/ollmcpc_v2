@@ -13,12 +13,14 @@ Monitor a file or directory in a loop.
 EOF
 }
 
-if [ $# -eq 0 ]; then
-  usage >&2
-  exit 1
-fi
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
 
-if [ "$1" = "--help" ]; then
+if [ $# -eq 0 ]; then
   usage
   exit 0
 fi
@@ -30,34 +32,31 @@ interval=2
 lines=""
 
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --help)
-      usage
-      exit 0
-      ;;
-    --interval)
-      shift
-      if [ $# -eq 0 ]; then
-        echo "Error: --interval requires a number" >&2
-        exit 1
-      fi
-      interval="$1"
-      ;;
-    --lines)
-      shift
-      if [ $# -eq 0 ]; then
-        echo "Error: --lines requires a number" >&2
-        exit 1
-      fi
-      lines="$1"
-      ;;
-    *)
-      echo "Error: unknown option '$1'" >&2
-      usage >&2
+  if [ "$1" = "--interval" ]; then
+    shift
+    if [ $# -eq 0 ]; then
+      echo "Error: --interval requires a number" >&2
       exit 1
-      ;;
-  esac
-  shift
+    fi
+    interval="$1"
+    shift
+    continue
+  fi
+
+  if [ "$1" = "--lines" ]; then
+    shift
+    if [ $# -eq 0 ]; then
+      echo "Error: --lines requires a number" >&2
+      exit 1
+    fi
+    lines="$1"
+    shift
+    continue
+  fi
+
+  echo "Error: unexpected argument '$1'" >&2
+  usage >&2
+  exit 1
 done
 
 if [ ! -e "$path" ]; then
@@ -65,26 +64,14 @@ if [ ! -e "$path" ]; then
   exit 1
 fi
 
-case "$interval" in
-  ''|*[!0-9]*)
-    echo "Error: --interval must be a positive integer" >&2
-    exit 1
-    ;;
-esac
-if [ "$interval" -le 0 ]; then
-  echo "Error: --interval must be greater than 0" >&2
+if ! [ "$interval" -gt 0 ] 2>/dev/null; then
+  echo "Error: --interval must be a positive integer" >&2
   exit 1
 fi
 
 if [ -n "$lines" ]; then
-  case "$lines" in
-    ''|*[!0-9]*)
-      echo "Error: --lines must be a positive integer" >&2
-      exit 1
-      ;;
-  esac
-  if [ "$lines" -le 0 ]; then
-    echo "Error: --lines must be greater than 0" >&2
+  if ! [ "$lines" -gt 0 ] 2>/dev/null; then
+    echo "Error: --lines must be a positive integer" >&2
     exit 1
   fi
   if [ ! -f "$path" ]; then

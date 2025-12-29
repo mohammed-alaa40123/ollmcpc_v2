@@ -12,27 +12,27 @@ Run a command safely, optionally in the background.
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 if [ $# -eq 0 ]; then
-  usage >&2
-  exit 1
+  usage
+  exit 0
 fi
 
 bg=0
 args=()
 
 for arg in "$@"; do
-  case "$arg" in
-    --help)
-      usage
-      exit 0
-      ;;
-    --bg)
-      bg=1
-      ;;
-    *)
-      args+=("$arg")
-      ;;
-  esac
+  if [ "$arg" = "--bg" ]; then
+    bg=1
+  else
+    args+=("$arg")
+  fi
 done
 
 if [ "${#args[@]}" -eq 0 ]; then

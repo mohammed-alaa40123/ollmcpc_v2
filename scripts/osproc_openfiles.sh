@@ -10,7 +10,14 @@ Show open files for a process by PID.
 EOF
 }
 
-if [ $# -eq 0 ] || [ "$1" = "--help" ]; then
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
+if [ $# -eq 0 ]; then
   usage
   exit 0
 fi
@@ -22,12 +29,10 @@ if [ $# -ne 1 ]; then
 fi
 
 pid="$1"
-case "$pid" in
-  ''|*[!0-9]*)
-    echo "Error: PID must be a positive integer" >&2
-    exit 1
-    ;;
-esac
+if [ -z "$pid" ] || [ "${pid#*[!0-9]*}" != "$pid" ]; then
+  echo "Error: PID must be a positive integer" >&2
+  exit 1
+fi
 
 if ! kill -0 "$pid" 2>/dev/null; then
   echo "Error: process not found or not accessible: $pid" >&2
@@ -35,27 +40,19 @@ if ! kill -0 "$pid" 2>/dev/null; then
 fi
 
 if command -v lsof >/dev/null 2>&1; then
-  lsof -p "$pid" 2>/dev/null | awk '
-    NR <= 50 { print }
-    END {
-      if (NR > 50) {
-        print "... showing first 50 lines (use lsof -p PID for full list)"
-      }
-    }'
+  total="$(lsof -p "$pid" 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "$total" -gt 50 ]; then
+    lsof -p "$pid" 2>/dev/null | head -n 50
+    echo "... showing first 50 lines"
+  else
+    lsof -p "$pid" 2>/dev/null
+  fi
   exit 0
 fi
 
 if [ -d "/proc/$pid/fd" ]; then
-  if ! command -v readlink >/dev/null 2>&1; then
-    echo "Error: readlink not available for /proc fallback" >&2
-    exit 1
-  fi
   echo "Open file descriptors:"
-  for fd in /proc/"$pid"/fd/*; do
-    name="$(basename "$fd")"
-    target="$(readlink "$fd" 2>/dev/null || echo "unknown")"
-    printf '%s -> %s\n' "$name" "$target"
-  done
+  ls -l "/proc/$pid/fd"
 else
   echo "Error: /proc/$pid/fd not available" >&2
   exit 1

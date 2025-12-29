@@ -10,6 +10,13 @@ Run the signal ping-pong demo.
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 if [ $# -gt 1 ]; then
   echo "Error: too many arguments" >&2
   usage >&2
@@ -17,16 +24,10 @@ if [ $# -gt 1 ]; then
 fi
 
 if [ $# -eq 1 ]; then
-  if [ "$1" = "--help" ]; then
-    usage
-    exit 0
+  if [ -z "$1" ] || [ "${1#*[!0-9]*}" != "$1" ]; then
+    echo "Error: rounds must be a positive integer" >&2
+    exit 1
   fi
-  case "$1" in
-    ''|*[!0-9]*)
-      echo "Error: rounds must be a positive integer" >&2
-      exit 1
-      ;;
-  esac
 fi
 
 bin_path="scripts/bin/sig_pingpong"

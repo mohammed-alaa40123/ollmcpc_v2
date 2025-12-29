@@ -4,24 +4,23 @@ set -u
 
 usage() {
   cat <<'EOF'
-Usage: osassist_ram_or_swap.sh [--help]
+Usage: osassist_memory_info.sh [--help]
 
-Answer: "Should I add RAM, increase swap, or manage processes?"
+Memory and battery information.
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 if [ $# -gt 0 ]; then
-  case "$1" in
-    --help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Error: unexpected argument '$1'" >&2
-      usage >&2
-      exit 1
-      ;;
-  esac
+  echo "Error: unexpected argument '$1'" >&2
+  usage >&2
+  exit 1
 fi
 
 if [ ! -f /proc/meminfo ]; then
@@ -71,51 +70,57 @@ else
 fi
 
 echo
-echo "Recommended actions:"
-echo "1) Close or pause heavy apps from the list above."
-echo "2) Stop a hog temporarily (SIGSTOP) or terminate it (SIGTERM)."
-echo "3) Consider increasing swap (manual steps):"
-echo "   sudo fallocate -l 2G /swapfile"
-echo "   sudo chmod 600 /swapfile"
-echo "   sudo mkswap /swapfile && sudo swapon /swapfile"
-echo "   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab"
+echo "Battery info:"
+percent=""
+status_batt=""
+time_est=""
 
-if [ -t 0 ]; then
-  echo
-  echo "Optional action: signal a PID from the list above."
-  printf "Send signal? (s=SIGSTOP, t=SIGTERM, n=skip): " >&2
-  read -r choice
-  case "$choice" in
-    s|S|t|T)
-      printf "Enter PID: " >&2
-      read -r pid
-      case "$pid" in
-        ''|*[!0-9]*)
-          echo "Error: PID must be a positive integer" >&2
-          exit 1
-          ;;
-      esac
-      if ! kill -0 "$pid" 2>/dev/null; then
-        echo "Error: PID not found or not accessible: $pid" >&2
-        exit 1
-      fi
-      if [ "$choice" = "s" ] || [ "$choice" = "S" ]; then
-        signal="SIGSTOP"
-      else
-        signal="SIGTERM"
-      fi
-      printf "Type YES to send %s to PID %s: " "$signal" "$pid" >&2
-      read -r confirm
-      if [ "$confirm" = "YES" ]; then
-        if kill -"$signal" "$pid" 2>/dev/null; then
-          echo "Sent $signal to PID $pid."
-        else
-          echo "Error: failed to send $signal to PID $pid" >&2
-          exit 1
-        fi
-      else
-        echo "Aborted." >&2
-      fi
-      ;;
-  esac
+if command -v upower >/dev/null 2>&1; then
+  device="$(upower -e | grep -i battery | head -n 1)"
+  if [ -n "$device" ]; then
+    info="$(upower -i "$device")"
+    percent="$(printf '%s\n' "$info" | awk -F: '/percentage/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+    status_batt="$(printf '%s\n' "$info" | awk -F: '/state/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+    time_est="$(printf '%s\n' "$info" | awk -F: '/time to empty/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+    if [ -z "$time_est" ]; then
+      time_est="$(printf '%s\n' "$info" | awk -F: '/time to full/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+    fi
+  fi
+fi
+
+if [ -z "$percent" ] && [ -z "$status_batt" ]; then
+  battery_dir="$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -n 1)"
+  if [ -n "$battery_dir" ]; then
+    if [ -f "$battery_dir/capacity" ]; then
+      percent="$(cat "$battery_dir/capacity")%"
+    fi
+    if [ -f "$battery_dir/status" ]; then
+      status_batt="$(cat "$battery_dir/status")"
+    fi
+    if [ -f "$battery_dir/time_to_empty_now" ]; then
+      time_est="$(cat "$battery_dir/time_to_empty_now") min (to empty)"
+    elif [ -f "$battery_dir/time_to_full_now" ]; then
+      time_est="$(cat "$battery_dir/time_to_full_now") min (to full)"
+    elif [ -f "$battery_dir/energy_now" ] && [ -f "$battery_dir/power_now" ]; then
+      time_est="$(awk -v e="$(cat "$battery_dir/energy_now")" -v p="$(cat "$battery_dir/power_now")" \
+        'BEGIN { if (p > 0) printf "%.1f hours", e / p; else print "" }')"
+    fi
+  fi
+fi
+
+if [ -z "$percent" ] && [ -z "$status_batt" ]; then
+  echo "No battery found"
+else
+  if [ -z "$percent" ]; then
+    percent="unknown"
+  fi
+  if [ -z "$status_batt" ]; then
+    status_batt="unknown"
+  fi
+  if [ -z "$time_est" ]; then
+    time_est="unknown"
+  fi
+  echo "Battery percentage: $percent"
+  echo "Battery status: $status_batt"
+  echo "Estimated time: $time_est"
 fi

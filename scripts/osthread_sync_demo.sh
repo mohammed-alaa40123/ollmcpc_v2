@@ -10,18 +10,17 @@ Run the thread synchronization demo.
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 if [ $# -gt 0 ]; then
-  case "$1" in
-    --help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Error: unexpected argument '$1'" >&2
-      usage >&2
-      exit 1
-      ;;
-  esac
+  echo "Error: unexpected argument '$1'" >&2
+  usage >&2
+  exit 1
 fi
 
 bin_path="scripts/bin/thread_sync"

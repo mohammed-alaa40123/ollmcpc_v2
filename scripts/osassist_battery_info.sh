@@ -4,24 +4,23 @@ set -u
 
 usage() {
   cat <<'EOF'
-Usage: osassist_battery_saver.sh [--help]
+Usage: osassist_battery_info.sh [--help]
 
-Answer: "How do I make my battery last longer?"
+Battery and memory information.
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 if [ $# -gt 0 ]; then
-  case "$1" in
-    --help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Error: unexpected argument '$1'" >&2
-      usage >&2
-      exit 1
-      ;;
-  esac
+  echo "Error: unexpected argument '$1'" >&2
+  usage >&2
+  exit 1
 fi
 
 percent=""
@@ -89,44 +88,16 @@ else
 fi
 
 echo
-echo "Checklist (ranked):"
-echo "1) Lower screen brightness / disable keyboard backlight."
-echo "2) Close or pause heavy apps (video, games, VMs)."
-echo "3) Enable power saver / battery saver mode."
-echo "4) Turn off Bluetooth/Wi-Fi if not needed."
-echo "5) Pause background sync or backups."
-
-if [ -t 0 ]; then
-  echo
-  echo "Optional action: stop a PID from the list above (SIGSTOP)."
-  printf "Stop a PID now? (y/N): " >&2
-  read -r answer
-  case "$answer" in
-    y|Y)
-      printf "Enter PID: " >&2
-      read -r pid
-      case "$pid" in
-        ''|*[!0-9]*)
-          echo "Error: PID must be a positive integer" >&2
-          exit 1
-          ;;
-      esac
-      if ! kill -0 "$pid" 2>/dev/null; then
-        echo "Error: PID not found or not accessible: $pid" >&2
-        exit 1
-      fi
-      printf "Type YES to SIGSTOP PID %s: " "$pid" >&2
-      read -r confirm
-      if [ "$confirm" = "YES" ]; then
-        if kill -STOP "$pid" 2>/dev/null; then
-          echo "Sent SIGSTOP to PID $pid."
-        else
-          echo "Error: failed to SIGSTOP PID $pid" >&2
-          exit 1
-        fi
-      else
-        echo "Aborted." >&2
-      fi
-      ;;
-  esac
+echo "Memory info:"
+if [ -f /proc/meminfo ]; then
+  mem_total="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
+  mem_avail="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+  swap_total="$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)"
+  swap_free="$(awk '/^SwapFree:/ {print $2}' /proc/meminfo)"
+  echo "MemTotal: ${mem_total:-unknown} kB"
+  echo "MemAvailable: ${mem_avail:-unknown} kB"
+  echo "SwapTotal: ${swap_total:-unknown} kB"
+  echo "SwapFree: ${swap_free:-unknown} kB"
+else
+  echo "Memory info not available" >&2
 fi

@@ -16,52 +16,57 @@ If no message argument is provided, a single line is read from stdin.
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 level=""
 with_ts=0
 log_file=""
 
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --help)
-      usage
-      exit 0
-      ;;
-    --level)
-      shift
-      if [ $# -eq 0 ]; then
-        echo "Error: --level requires a value" >&2
-        exit 1
-      fi
-      case "$1" in
-        INFO|WARN|ERROR)
-          level="$1"
-          ;;
-        *)
-          echo "Error: invalid level '$1' (use INFO, WARN, or ERROR)" >&2
-          exit 1
-          ;;
-      esac
-      ;;
-    --ts)
-      with_ts=1
-      ;;
-    --log)
-      shift
-      if [ $# -eq 0 ]; then
-        echo "Error: --log requires a file path" >&2
-        exit 1
-      fi
-      log_file="$1"
-      ;;
-    --*)
-      echo "Error: unknown option '$1'" >&2
+  if [ "$1" = "--level" ]; then
+    shift
+    if [ $# -eq 0 ]; then
+      echo "Error: --level requires a value" >&2
       exit 1
-      ;;
-    *)
-      break
-      ;;
-  esac
-  shift
+    fi
+    if [ "$1" = "INFO" ] || [ "$1" = "WARN" ] || [ "$1" = "ERROR" ]; then
+      level="$1"
+    else
+      echo "Error: invalid level '$1' (use INFO, WARN, or ERROR)" >&2
+      exit 1
+    fi
+    shift
+    continue
+  fi
+
+  if [ "$1" = "--ts" ]; then
+    with_ts=1
+    shift
+    continue
+  fi
+
+  if [ "$1" = "--log" ]; then
+    shift
+    if [ $# -eq 0 ]; then
+      echo "Error: --log requires a file path" >&2
+      exit 1
+    fi
+    log_file="$1"
+    shift
+    continue
+  fi
+
+  if [ "${1#--}" != "$1" ]; then
+    echo "Error: unexpected argument '$1'" >&2
+    exit 1
+  fi
+
+  break
 done
 
 message=""

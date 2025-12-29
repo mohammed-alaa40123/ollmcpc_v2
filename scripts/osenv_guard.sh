@@ -14,37 +14,34 @@ Exit codes:
 EOF
 }
 
+for arg in "$@"; do
+  if [ "$arg" = "--help" ]; then
+    usage
+    exit 0
+  fi
+done
+
 if [ $# -gt 0 ]; then
-  case "$1" in
-    --help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Error: unexpected argument '$1'" >&2
-      usage >&2
-      exit 1
-      ;;
-  esac
+  echo "Error: unexpected argument '$1'" >&2
+  usage >&2
+  exit 1
 fi
 
 env | sort | while IFS= read -r line; do
-  case "$line" in
-    *=*)
-      key="${line%%=*}"
-      value="${line#*=}"
-      upper_key="$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')"
-      case "$upper_key" in
-        *PASS*|*PASSWORD*|*TOKEN*|*KEY*|*SECRET*)
-          printf '%s=REDACTED\n' "$key"
-          ;;
-        *)
-          printf '%s=%s\n' "$key" "$value"
-          ;;
-      esac
-      ;;
-    *)
-      printf '%s\n' "$line"
-      ;;
-  esac
+  if [ "${line#*=}" != "$line" ]; then
+    key="${line%%=*}"
+    value="${line#*=}"
+    upper_key="$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')"
+    if [ "${upper_key#*PASS}" != "$upper_key" ] || \
+      [ "${upper_key#*PASSWORD}" != "$upper_key" ] || \
+      [ "${upper_key#*TOKEN}" != "$upper_key" ] || \
+      [ "${upper_key#*KEY}" != "$upper_key" ] || \
+      [ "${upper_key#*SECRET}" != "$upper_key" ]; then
+      printf '%s=REDACTED\n' "$key"
+    else
+      printf '%s=%s\n' "$key" "$value"
+    fi
+  else
+    printf '%s\n' "$line"
+  fi
 done
