@@ -37,7 +37,33 @@ void cmd_wipe(int argc, char **argv);
 CommandMetadata internal_cmds[] = {
 
     {"sched", LVL_ADMIN, NULL, 1, cmd_sched},
-    {"wipe",  LVL_DANGEROUS, "This clears system caches and logs.", 1, cmd_wipe},
+    {"wipe",  LVL_DANGEROUS, "This clears system caches and logs.", 1, NULL},
+    {"osassist_battery_info", LVL_USER, NULL, 0, NULL},
+    {"osassist_memory_info",  LVL_USER, NULL, 0, NULL},
+    {"osecho_plus",           LVL_USER, NULL, 0, NULL},
+    {"osmem_usage",           LVL_USER, NULL, 0, NULL},
+    {"osnet_basic",           LVL_USER, NULL, 0, NULL},
+    {"osuptime_plus",         LVL_USER, NULL, 0, NULL},
+    {"osshm_list",            LVL_USER, NULL, 0, NULL},
+
+    // Process & Thread Demos (Safe/User)
+    {"ossig_pingpong",     LVL_USER, NULL, 0, NULL},
+    {"osthread_demo",      LVL_USER, NULL, 0, NULL},
+    {"osthread_sync_demo", LVL_USER, NULL, 0, NULL},
+
+    // Process Inspection (User - typically safe for own processes, but generally harmless)
+    {"process_info",         LVL_USER, NULL, 0, NULL},
+    {"process_state",        LVL_USER, NULL, 0, NULL},
+    {"osproc_children_list", LVL_USER, NULL, 0, NULL},
+    {"osproc_find",          LVL_USER, NULL, 0, NULL},
+
+    // Advanced Introspection (Admin - Potential privacy/security implications)
+    {"osenv_guard",           LVL_ADMIN, NULL, 0, NULL},           // Environment variables often hold keys
+    {"osmem_heapstack_range", LVL_ADMIN, NULL, 0, NULL}, // Deep memory inspection
+    {"osproc_openfiles",      LVL_ADMIN, NULL, 0, NULL},      // Can reveal sensitive file handles
+
+    // Execution (Dangerous)
+    {"run_shell_command", LVL_USER, "Executes arbitrary shell commands.", 0, NULL},
     {NULL, 0, NULL, 0, NULL}
 };
 
@@ -225,8 +251,11 @@ int main(int argc, char **argv) {
     // Check Internal Table first
     int found_internal = 0;
     for (int i = 0; internal_cmds[i].name != NULL; i++) {
-        if (strcmp(cmd_name, internal_cmds[i].name) == 0) {
+        if (strstr(cmd_name, internal_cmds[i].name) != 0) {
+            
             meta = internal_cmds[i];
+            if(meta.level==LVL_ADMIN)
+                printf("This command has ADMIN Privelage\n");
             found_internal = 1;
             break;
         }
@@ -254,6 +283,7 @@ int main(int argc, char **argv) {
     
     // A. Check Permissions
     if (meta.level >= LVL_ADMIN) {
+        
         if (!is_authorized_user()) {
             printf("PERMISSION DENIED: '%s' requires Admin privileges.\n", cmd_name);
             log_audit(cmd_name, user, "DENIED", "Unauthorized Group");

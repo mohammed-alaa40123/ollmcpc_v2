@@ -267,12 +267,13 @@ void run_interactive_session(MCPClient& client) {
                     }
                 }
             }
-            exec_dangerous=0;
+            exec_dangerous=1;
             // Access Control (HIL)
             bool approved = true;
             if (is_manual) {
                 approved = true; // Hard override for manual mode
             } else if (client.human_in_loop) {
+                exec_dangerous=0;
                 term::draw_box("GUARD - ACTION PENDING", "Action:  " + term::BOLD + tool_name + term::RESET + "\nInputs:  " + term::DIM + tool_args + term::RESET, term::YELLOW);
                 std::cout << "  " << term::BOLD << "Execute? ([y]/n): " << term::RESET << std::flush;
                 std::string app_in;
