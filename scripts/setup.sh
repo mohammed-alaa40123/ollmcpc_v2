@@ -23,13 +23,18 @@ else
     echo "✅ All system packages are already installed."
 fi
 
-# # Install Ollama
-# if ! command -v ollama &> /dev/null; then
-#     echo "⬇️  Ollama not found. Installing..."
-#     curl -fsSL https://ollama.com/install.sh | sh
-# else
-#     echo "✅ Ollama already installed."
-# fi
+# Install Ollama (optional)
+read -rp "Install Ollama? [y/N]: " install_ollama
+if [ "$install_ollama" = "y" ] || [ "$install_ollama" = "Y" ]; then
+    if ! command -v ollama >/dev/null 2>&1; then
+        echo "⬇️  Ollama not found. Installing..."
+        curl -fsSL https://ollama.com/install.sh | sh
+    else
+        echo "✅ Ollama already installed."
+    fi
+else
+    echo "ℹ️  Skipping Ollama install."
+fi
 
 # Build
 echo "🏗  Building OLLMCPC..."
