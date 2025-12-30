@@ -61,6 +61,23 @@ node -v
 npm -v
 ```
 
+### Install Node.js via NVM
+If `node`/`npm` are missing or you need a newer version, install Node.js using NVM:
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# 2. Activate NVM (or just close and reopen your terminal)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+```
+
+Then install and use Node.js 20:
+```bash
+nvm install 20
+nvm use 20
+nvm alias default 20
+```
+
 ### Tool Execution Fails
 Check `debug.log` in the root directory. It contains all JSON-RPC traffic between OLLMCPC and the MCP servers.
 
